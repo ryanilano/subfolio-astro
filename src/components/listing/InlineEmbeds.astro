@@ -11,6 +11,7 @@
  *
  * Wave component — C16.
  */
+import { assetUrl } from "../../lib/routing.ts";
 import type { Embed } from "../../loaders/schema.ts";
 
 interface Props {
@@ -37,7 +38,7 @@ const rssEmbeds = embeds.filter((e) => e.type === "rss");
   imageEmbeds.length > 0 && (
     <div id={`inline_${position}_image`}>
       {imageEmbeds.map((image) => (
-        <img src={image.src} />
+        <img src={assetUrl(image.src)} />
       ))}
       <div class="clear"><!-- --></div>
     </div>

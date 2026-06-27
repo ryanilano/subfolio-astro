@@ -32,11 +32,14 @@ side-by-side against identical content for diffing. No data migration.
   against the bundled `content/examples/` fixture via a throwaway `/debug` route. Deferred
   behaviors (sharp thumbnails, RSS fetch, Textile/Markdown render, `-access` enforcement)
   are captured as **parsed intent** in the entries, not yet executed.
-- **Phase 2 — Themes → Astro components.** ⏳ **NEXT.** Port the `default` theme's layouts,
+- **Phase 2 — Themes → Astro components.** ✅ **DONE.** Ported the `default` theme's layouts,
   listing views, and per-filekind views to Astro components consuming the loader's folder
-  entries; drop in the existing SCSS/assets. Drop the `/debug` route at cutover. Bulk of
-  the work. See [spec/SPEC-theme-api.md](./spec/SPEC-theme-api.md) (its template-function
-  surface re-expressed as Astro components) and [spec/SPEC-filekinds.md](./spec/SPEC-filekinds.md).
+  entries, with the existing SCSS/assets. Wired them into a catch-all route
+  ([src/pages/[...path].astro](../src/pages/%5B...path%5D.astro)) that resolves folder/file/
+  single/slide views like the PHP controller, plus a `/directory/<path>` raw-bytes endpoint;
+  dropped the `/debug` route at cutover. Deferred behaviors (sharp dimensions, RSS fetch,
+  Textile/MD body rendering, `-access`) remain captured as parsed intent. See
+  [spec/SPEC-theme-api.md](./spec/SPEC-theme-api.md) and [spec/SPEC-filekinds.md](./spec/SPEC-filekinds.md).
 - **Phase 3 — Build pipeline & deploy.** `sharp` thumbnails at build (resize-if-stale per
   [spec/SPEC-thumbnails.md](./spec/SPEC-thumbnails.md)), RSS fetch at build, `sass`,
   sitemap; deploy to Cloudflare Pages via Wrangler (mirror `ilano-fyi`). Diff side-by-side
@@ -53,7 +56,7 @@ side-by-side against identical content for diffing. No data migration.
 
 - [x] Phase 0 — Capture the spec
 - [x] Phase 1 — Astro content loader
-- [ ] Phase 2 — Themes → Astro components ← **next**
-- [ ] Phase 3 — Build pipeline & deploy (Cloudflare Pages)
+- [x] Phase 2 — Themes → Astro components
+- [ ] Phase 3 — Build pipeline & deploy (Cloudflare Pages) ← **next**
 - [ ] Phase 4 — Auth Worker (deferred / optional)
 - [ ] Phase 5 — Enhancer polish

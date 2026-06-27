@@ -1,0 +1,186 @@
+---
+/**
+ * Main route — replaces the Phase-1 /debug dump. Ports
+ * Filebrowser_Controller::index() path resolution: each content path resolves
+ * to a folder listing or a single-file detail view.
+ *
+ * getStaticPaths() emits four kinds of route from the loader's folder entries:
+ *   - folder    → listing page (Listing.astro)
+ *   - file      → filekind detail view (componentForKind)
+ *   - single    → .site/.oplx folder rendered as one detail view
+ *   - redirect  → .slide folder, meta-refresh to its first child's detail page
+ */
+import { resolve } from "node:path";
+import { getCollection } from "astro:content";
+import Layout from "../layouts/Layout.astro";
+import Listing from "../components/listing/Listing.astro";
+import { loadFileKinds } from "../loaders/filekinds.ts";
+import { buildFileViewData, type FileViewData } from "../lib/fileHelpers.ts";
+import {
+  componentForKind,
+  buildBreadcrumb,
+  folderSiblingNav,
+  fileSiblingNav,
+  pageUrl,
+} from "../lib/routing.ts";
+import type { FolderEntry, ChildFile } from "../loaders/schema.ts";
+
+// cwd-relative (not import.meta.url) so paths resolve to the project root at
+// build runtime, not into dist/. Mirrors src/content.config.ts.
+const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
+const filekindsPath = resolve("./config/filekinds.yml");
+
+type RouteProps =
+  | { kind: "folder"; entry: FolderEntry }
+  | { kind: "single"; entry: FolderEntry }
+  | { kind: "file"; entry: FolderEntry; file: ChildFile }
+  | { kind: "redirect"; to: string };
+
+export async function getStaticPaths() {
+  const all = await getCollection("folders");
+  const entries = all.map((e) => e.data);
+  const paramFor = (p: string) => (p === "." ? undefined : p);
+  const routes: { params: { path: string | undefined }; props: RouteProps }[] = [];
+
+  for (const entry of entries) {
+    // .slide folder → redirect to its first (non-hidden) file's detail page,
+    // mirroring PHP: url::redirect(get_link(slide_files[0])). entry.files are
+    // already hidden-filtered and sorted by the loader. If a .slide folder has
+    // no direct files (only subfolders), PHP renders a normal listing — so we
+    // fall through to the folder case below.
+    if (entry.enhancerFolder === "slide" && entry.files.length > 0) {
+      const first = entry.files[0];
+      const target = entry.path === "." ? first.name : `${entry.path}/${first.name}`;
+      routes.push({
+        params: { path: paramFor(entry.path) },
+        props: { kind: "redirect", to: pageUrl(target) },
+      });
+      continue;
+    }
+
+    // .site/.oplx folder → single detail view (no listing).
+    if (entry.single) {
+      routes.push({
+        params: { path: paramFor(entry.path) },
+        props: { kind: "single", entry },
+      });
+      continue;
+    }
+
+    // Normal folder → listing page.
+    routes.push({
+      params: { path: paramFor(entry.path) },
+      props: { kind: "folder", entry },
+    });
+
+    // Regular files (non-enhancer) → individual detail pages.
+    for (const file of entry.files) {
+      if (file.enhancer !== null) continue; // .link/.pop are listing anchors only
+      const filePath = entry.path === "." ? file.name : `${entry.path}/${file.name}`;
+      routes.push({
+        params: { path: filePath },
+        props: { kind: "file", entry, file },
+      });
+    }
+  }
+
+  return routes;
+}
+
+const props = Astro.props as RouteProps;
+const allEntries = (await getCollection("folders")).map((e) => e.data);
+const kinds = loadFileKinds(filekindsPath);
+
+// --- Resolve view data per kind ---------------------------------------------
+let title = "";
+let pageClass = "";
+let breadcrumb: ReturnType<typeof buildBreadcrumb> = [];
+let prevLink: string | null = null;
+let nextLink: string | null = null;
+let isRoot = false;
+
+let fileView: FileViewData | null = null;
+let DetailComponent: ReturnType<typeof componentForKind> | null = null;
+
+if (props.kind === "folder") {
+  breadcrumb = buildBreadcrumb(props.entry.path);
+  isRoot = props.entry.path === ".";
+  title = props.entry.path === "." ? "" : props.entry.displayName;
+  const nav = folderSiblingNav(props.entry, allEntries);
+  prevLink = nav.prevLink;
+  nextLink = nav.nextLink;
+} else if (props.kind === "single") {
+  breadcrumb = buildBreadcrumb(props.entry.path);
+  // .site/.oplx folder rendered as a single file-detail view. Synthesize a
+  // ChildFile from the folder so buildFileViewData/componentForKind apply.
+  pageClass = "page--detail";
+  title = props.entry.displayName;
+  const folderAsFile: ChildFile = {
+    name: props.entry.name,
+    displayName: props.entry.displayName,
+    ext: props.entry.enhancerFolder ?? "",
+    kind: props.entry.enhancerFolder ?? "",
+    icon: props.entry.enhancerFolder ?? "dir",
+    display: props.entry.enhancerFolder === "oplx" ? "OmniPlan File" : "Mini Site",
+    enhancer: null,
+  };
+  fileView = buildFileViewData(folderAsFile, {
+    contentRoot,
+    folderPath: props.entry.path === "." ? "" : `${props.entry.path}/`,
+    kinds,
+    relPath: props.entry.path,
+  });
+  DetailComponent = componentForKind(props.entry.enhancerFolder ?? "");
+} else if (props.kind === "file") {
+  // Regular file detail.
+  const relPathForCrumb =
+    props.entry.path === "." ? props.file.name : `${props.entry.path}/${props.file.name}`;
+  breadcrumb = buildBreadcrumb(relPathForCrumb);
+  pageClass = "page--detail";
+  title = props.file.displayName;
+  const relPath =
+    props.entry.path === "." ? props.file.name : `${props.entry.path}/${props.file.name}`;
+  fileView = buildFileViewData(props.file, {
+    contentRoot,
+    folderPath: props.entry.path === "." ? "" : `${props.entry.path}/`,
+    kinds,
+    relPath,
+  });
+  DetailComponent = componentForKind(props.file.kind);
+  const nav = fileSiblingNav(props.entry, props.file.name);
+  prevLink = nav.prevLink;
+  nextLink = nav.nextLink;
+}
+
+// .slide redirect target (static build can't issue a server redirect, so we
+// render a meta-refresh page — the Phase-2 stand-in for url::redirect()).
+const redirectTo = props.kind === "redirect" ? props.to : null;
+---
+
+{
+  redirectTo ? (
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="refresh" content={`0;url=${redirectTo}`} />
+        <link rel="canonical" href={redirectTo} />
+        <title>Redirecting…</title>
+      </head>
+      <body>
+        <a href={redirectTo}>Continue</a>
+      </body>
+    </html>
+  ) : (
+    <Layout
+      title={title}
+      pageClass={pageClass}
+      breadcrumb={breadcrumb}
+      isRoot={isRoot}
+      prevLink={prevLink}
+      nextLink={nextLink}
+    >
+      {props.kind === "folder" && <Listing entry={props.entry} />}
+      {DetailComponent && fileView && <DetailComponent file={fileView} />}
+    </Layout>
+  )
+}

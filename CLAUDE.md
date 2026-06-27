@@ -10,12 +10,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```sh
 npm install                  # Node 24 (see .nvmrc)
-npm run dev                  # astro dev → /debug inspects parsed folder entries
+npm run dev                  # astro dev → browse the rendered listing/detail pages
 npm run build                # astro check (types) + astro build
 npm run preview              # serve the static build
 ```
 
-There are no tests yet — Phase 1 was validated by eyeballing the `/debug` route against the bundled `content/examples/` fixture.
+There are no tests yet — Phase 1 was validated by eyeballing the (now-removed) `/debug` route against the bundled `content/examples/` fixture; Phase 2 is validated by loading the rendered pages (`npm run preview`) against the same fixture.
 
 ## Architecture
 
@@ -45,7 +45,12 @@ The loader is registered in [src/content.config.ts](src/content.config.ts) as a 
 
 ### Routing
 
-The only page route is the throwaway [src/pages/debug/[...path].astro](src/pages/debug/[...path].astro) — it dumps the JSON of each folder entry for visual validation. This gets removed in Phase 2 when theme components take over.
+Two URL namespaces, mirroring the PHP engine (so old and new can be diffed on the same content):
+
+- **HTML pages** — [src/pages/[...path].astro](src/pages/[...path].astro) is the catch-all that ports `Filebrowser_Controller::index()`. Its `getStaticPaths()` resolves each loader entry to one of four route kinds: a **folder** listing ([Listing.astro](src/components/listing/Listing.astro) composes the seven partials in PHP order), a **file** detail view (kind→component dispatch via [src/lib/routing.ts](src/lib/routing.ts) `componentForKind`), a **single** view for `.site`/`.oplx` folders, or a meta-refresh **redirect** for `.slide` folders. Breadcrumb and prev/next nav are derived in `routing.ts`.
+- **Raw bytes** — [src/pages/directory/[...path].ts](src/pages/directory/[...path].ts) serves file contents under `/directory/<path>` (ports `get_file_url()`). Every `<img src>` / download href routes through `routing.ts` `assetUrl()`. `-access` enforcement is still deferred (Phase 4) — everything served is public.
+
+The Phase-1 `/debug` JSON-dump route was removed at the Phase-2 cutover.
 
 ### Content fixture
 
@@ -64,5 +69,5 @@ The only page route is the throwaway [src/pages/debug/[...path].astro](src/pages
 See [docs/ROADMAP.md](docs/ROADMAP.md) for full details. Current state:
 - **Phase 0** ✅ — Spec captured from the PHP engine (see [docs/spec/](docs/spec/))
 - **Phase 1** ✅ — Content loader (this code)
-- **Phase 2** ⏳ — Theme components (next)
-- **Phase 3–5** — Build pipeline, deferred auth, enhancer polish
+- **Phase 2** ✅ — Theme components wired into real listing/detail routes; `/debug` dropped
+- **Phase 3–5** — Build pipeline (sharp/RSS/sass), deferred auth, enhancer polish

@@ -10,6 +10,7 @@ import { statSync } from "node:fs";
 import { join } from "node:path";
 import type { ChildFile } from "../loaders/schema.ts";
 import type { FileKind } from "../loaders/filekinds.ts";
+import { assetUrl } from "./routing.ts";
 
 /** The complete shape a filekind view receives — ChildFile + computed extras. */
 export interface FileViewData {
@@ -124,7 +125,8 @@ export function buildFileViewData(
   ctx: FileViewContext,
 ): FileViewData {
   const absPath = join(ctx.contentRoot, ctx.relPath);
-  const url = `/${ctx.relPath}`;
+  // Raw bytes live under /directory/ (mirrors Filebrowser::get_file_url()).
+  const url = assetUrl(ctx.relPath);
 
   // Stat for size/date
   let rawsize = 0;

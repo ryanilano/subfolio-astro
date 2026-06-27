@@ -7,6 +7,7 @@
  *
  * Wave component C14 — ported on port/listing-features.
  */
+import { assetUrl } from "../../lib/routing.ts";
 import type { Feature } from "../../loaders/schema.ts";
 
 interface Props {
@@ -34,7 +35,7 @@ const { features, folderPath } = Astro.props;
 
           // Image URL: mirrors PHP $item['image_file'] = "/directory/".$folder."/".$feature['image']
           const imageSrc = feature.image
-            ? `/directory/${folderPath}/${feature.image}`
+            ? assetUrl(folderPath ? `${folderPath}/${feature.image}` : feature.image)
             : "";
 
           const hasTitle = feature.title != null && feature.title !== "";

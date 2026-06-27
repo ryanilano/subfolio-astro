@@ -11,6 +11,7 @@
  * Wave component — C12.
  */
 import { defaultOptions } from "../../lib/site.ts";
+import { assetUrl, pageUrl } from "../../lib/routing.ts";
 import type { FolderEntry } from "../../loaders/schema.ts";
 
 interface GalleryImage {
@@ -30,11 +31,14 @@ interface Props {
   entry: FolderEntry;
   /** Listing mode override. Defaults to site options. */
   listingMode?: string;
-  /** Absolute folder path prefix for URL construction. */
+  /**
+   * Accepted for call-site compatibility; URLs are derived from entry.path.
+   * @deprecated paths now come from entry.path via assetUrl()/pageUrl().
+   */
   folderPath?: string;
 }
 
-const { entry, listingMode = defaultOptions.listing_mode, folderPath = `/${entry.path}` } = Astro.props;
+const { entry, listingMode = defaultOptions.listing_mode } = Astro.props;
 
 // Filter to image files only (mirrors SubfolioFiles::gallery_images)
 const imageFiles = entry.files.filter((f) => f.kind === "img");
@@ -43,10 +47,15 @@ const imageFiles = entry.files.filter((f) => f.kind === "img");
 const thumbnailHeight = defaultOptions.thumbnail_height;
 const displayFilenames = defaultOptions.display_file_names_in_gallery;
 
+// Canonical "/"-relative folder path (root "." → "") for URL building.
+const relDir = entry.path === "." ? "" : entry.path;
+
 const galleryImages: GalleryImage[] = imageFiles.map((file) => {
-  // Phase 2: no thumbnail pipeline — use raw file URL
-  const url = `${folderPath}/${file.name}`;
-  const link = `${folderPath}/${file.name}/`;
+  const relPath = relDir ? `${relDir}/${file.name}` : file.name;
+  // Phase 2: no thumbnail pipeline — raw image bytes from /directory/.
+  const url = assetUrl(relPath);
+  // Anchor points at the image's detail page.
+  const link = pageUrl(relPath);
 
   return {
     width: 0,               // Phase 3 (sharp)

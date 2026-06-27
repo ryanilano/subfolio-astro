@@ -40,3 +40,6 @@ Subfolio install's `directory/` to run against real content.
 - `config/filekinds.yml` — extension → kind → view mapping (from upstream).
 - `content/examples/` — bundled fixture exercising every convention.
 - `src/pages/debug/` — throwaway loader-output inspector (removed before theming).
+- `docs/` — port plan and reference: [ROADMAP](docs/ROADMAP.md), the
+  [deployment ADR](docs/ADR-deployment.md), and the stack-agnostic
+  [behavior specs](docs/spec/) extracted from the original PHP engine.

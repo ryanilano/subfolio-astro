@@ -1,0 +1,54 @@
+---
+/**
+ * Inline embeds — ported from upstream pages/listing/inline_top.php,
+ * inline_middle.php, inline_bottom.php, and _inline_rss.php.
+ *
+ * Renders text, image, and RSS embeds at a given position (top/middle/bottom).
+ * Consumes entry.embeds.{top,middle,bottom} filtered by the `position` prop.
+ *
+ * Deferred: RSS items (Phase 3 fetch), text rendering (Phase 5 Textile/MD),
+ * image dimensions (Phase 3 sharp).
+ *
+ * Wave component — C16.
+ */
+import type { Embed } from "../../loaders/schema.ts";
+
+interface Props {
+  embeds: Embed[];
+  position: "top" | "middle" | "bottom";
+}
+
+const { embeds, position } = Astro.props;
+
+const textEmbeds = embeds.filter((e) => e.type === "txt");
+const imageEmbeds = embeds.filter((e) => e.type === "img");
+const rssEmbeds = embeds.filter((e) => e.type === "rss");
+---
+
+{
+  textEmbeds.length > 0 && (
+    <div id={`inline_${position}_text`} class="standard_paragraph">
+      {textEmbeds.map((text) => <Fragment set:html={text.rawText} />)}
+    </div>
+  )
+}
+
+{
+  imageEmbeds.length > 0 && (
+    <div id={`inline_${position}_image`}>
+      {imageEmbeds.map((image) => (
+        <img src={image.src} />
+      ))}
+      <div class="clear"><!-- --></div>
+    </div>
+  )
+}
+
+{
+  rssEmbeds.length > 0 &&
+    rssEmbeds.map((_rss) => (
+      <ul class="rss">
+        <!-- RSS items deferred to Phase 3 (HTTP fetch) -->
+      </ul>
+    ))
+}

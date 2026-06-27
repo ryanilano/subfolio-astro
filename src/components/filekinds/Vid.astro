@@ -1,0 +1,36 @@
+---
+/**
+ * Video filekind view — ported from upstream pages/filekinds/vid.php.
+ *
+ * Renders a QuickTime <EMBED> element for video files, plus the
+ * hideable download box when display_info is enabled.
+ *
+ * Wave C1 component.
+ */
+import HideableDownloadBox from "./HideableDownloadBox.astro";
+import { defaultOptions } from "../../lib/site.ts";
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+interface Props {
+  file: FileViewData;
+}
+
+const f = Astro.props.file;
+
+// Legacy QuickTime <embed> attributes aren't part of the typed HTML
+// attribute set, so spread an untyped record to keep output identical
+// to the PHP original without tripping astro check.
+const embedAttrs: Record<string, unknown> = {
+  src: f.url,
+  autoplay: f.autoplay || "false",
+  pluginspage: "http://public.apple.com/quicktime/",
+  width: f.width,
+  height: f.height,
+  scale: "noscale",
+  controller: "true",
+};
+---
+
+<embed {...embedAttrs} />
+
+{defaultOptions.display_info ? <HideableDownloadBox file={f} /> : null}

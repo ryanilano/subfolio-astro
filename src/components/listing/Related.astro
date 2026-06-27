@@ -1,0 +1,44 @@
+---
+/**
+ * Related items listing — ported from upstream pages/listing/related.php.
+ *
+ * Consumes entry.related (Related[]). Renders "See Also" links from .cut files.
+ *
+ * Wave component — port/listing-related (C15)
+ */
+import type { Related as RelatedItem } from "../../loaders/schema.ts";
+import { t } from "../../lib/i18n.ts";
+import { defaultOptions } from "../../lib/site.ts";
+
+interface Props {
+  items: RelatedItem[];
+  listingMode?: "list" | "grid" | "masonry";
+  displayIcons?: boolean;
+}
+
+const {
+  items,
+  listingMode = defaultOptions.listing_mode,
+  displayIcons = defaultOptions.display_icons,
+} = Astro.props;
+---
+
+{items.length > 0 && (
+  <div id="related">
+    <p>{t("seealso")}</p>
+    <div class={`list list--${listingMode}`} data-behavior="hover_list">
+      {items.map((item) => (
+        <a class="list__row" href={item.url}>
+          <span class="list__cell list__cell--filename">
+            {displayIcons && (
+              <span class="list__cell--filenameicon">
+                <i class={`icon icon__${listingMode === "grid" ? "grid" : "list"}_link`}></i>
+              </span>
+            )}
+            <span class="list__cell--filenametext">{item.name}</span>
+          </span>
+        </a>
+      ))}
+    </div>
+  </div>
+)}

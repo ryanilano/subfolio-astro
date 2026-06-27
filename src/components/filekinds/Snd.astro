@@ -1,0 +1,35 @@
+---
+/**
+ * Sound filekind view — ported from upstream pages/filekinds/snd.php.
+ *
+ * Renders an <embed> element for audio playback (QuickTime-era markup
+ * preserved for visual diffing) and conditionally shows the hideable
+ * download box when display_info is enabled.
+ */
+import { defaultOptions } from "../../lib/site.ts";
+import HideableDownloadBox from "./HideableDownloadBox.astro";
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+interface Props {
+  file: FileViewData;
+}
+
+const f = Astro.props.file;
+
+// Legacy QuickTime <embed> attributes aren't part of the typed HTML
+// attribute set, so spread an untyped record to keep output identical
+// to the PHP original without tripping astro check.
+const embedAttrs: Record<string, unknown> = {
+  src: f.url,
+  autoplay: f.autoplay,
+  controller: "true",
+  pluginspage: "http://public.apple.com/quicktime/",
+  width: f.width,
+  height: f.height,
+  scale: "noscale",
+};
+---
+
+<embed {...embedAttrs} />
+
+{defaultOptions.display_info && <HideableDownloadBox file={f} />}

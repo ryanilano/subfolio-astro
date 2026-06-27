@@ -1,0 +1,137 @@
+---
+/**
+ * Gallery listing view — ported from upstream pages/listing/gallery.php.
+ *
+ * Consumes a FolderEntry. Filters to image-kind files and renders a
+ * thumbnail gallery in the active listing mode (list/grid/masonry).
+ *
+ * Phase 2: uses raw file paths (sharp thumbnails → Phase 3),
+ * shadow/browser suffix detection deferred to Phase 3.
+ *
+ * Wave component — C12.
+ */
+import { defaultOptions } from "../../lib/site.ts";
+import type { FolderEntry } from "../../loaders/schema.ts";
+
+interface GalleryImage {
+  width: number;
+  height: number;
+  shadow: boolean;
+  browser: boolean;
+  containerWidth: number;
+  containerHeight: number;
+  class: string;
+  link: string;
+  filename: string;
+  url: string;
+}
+
+interface Props {
+  entry: FolderEntry;
+  /** Listing mode override. Defaults to site options. */
+  listingMode?: string;
+  /** Absolute folder path prefix for URL construction. */
+  folderPath?: string;
+}
+
+const { entry, listingMode = defaultOptions.listing_mode, folderPath = `/${entry.path}` } = Astro.props;
+
+// Filter to image files only (mirrors SubfolioFiles::gallery_images)
+const imageFiles = entry.files.filter((f) => f.kind === "img");
+
+// Build gallery image entries (mirrors SubfolioFiles::gallery_images loop)
+const thumbnailHeight = defaultOptions.thumbnail_height;
+const displayFilenames = defaultOptions.display_file_names_in_gallery;
+
+const galleryImages: GalleryImage[] = imageFiles.map((file) => {
+  // Phase 2: no thumbnail pipeline — use raw file URL
+  const url = `${folderPath}/${file.name}`;
+  const link = `${folderPath}/${file.name}/`;
+
+  return {
+    width: 0,               // Phase 3 (sharp)
+    height: 0,              // Phase 3 (sharp)
+    shadow: false,          // Phase 3 (suffix detection)
+    browser: false,         // Phase 3 (suffix detection)
+    containerWidth: 0,      // Phase 3 (sharp)
+    containerHeight: thumbnailHeight,
+    class: "gallery_thumbnail",  // Phase 3: "gallery_thumbnail custom" for custom thumbs
+    link,
+    filename: file.displayName,
+    url,
+  };
+});
+
+/** Build the inline style for the container wrapper div. */
+function containerStyle(img: GalleryImage, isMasonry: boolean): string | undefined {
+  if (isMasonry) return undefined;
+  return `max-height:${img.containerHeight}px`;
+}
+
+/** Build the inline style for the <img> tag. */
+function imgStyle(img: GalleryImage, isMasonry: boolean): string | undefined {
+  const parts: string[] = [];
+  if (!isMasonry) {
+    parts.push(`max-height:${img.containerHeight}px`);
+  }
+  if (img.shadow) {
+    parts.push("box-shadow:0 0 3px rgba(0,0,0, .15)");
+  }
+  if (img.browser) {
+    parts.push("box-shadow:0 -3px 0 #dedede, 0 0 3px rgba(0,0,0, .15)");
+  }
+  return parts.length > 0 ? parts.join("; ") + ";" : undefined;
+}
+
+const isMasonry = listingMode === "masonry";
+---
+
+{galleryImages.length > 0 && (
+  <div class={`gallery gallery--${listingMode}`}>
+    {isMasonry ? (
+      <ul data-behavior="masonry">
+        {galleryImages.map((image) => (
+          <li>
+            <a href={image.link} class="focusable">
+              <div class={image.class} style={containerStyle(image, isMasonry)}>
+                <div class="gallery__inner">
+                  <img
+                    width={image.width}
+                    height={image.height}
+                    src={image.url}
+                    style={imgStyle(image, isMasonry)}
+                  />
+                </div>
+              </div>
+              {displayFilenames && !isMasonry && (
+                <p>{image.filename}</p>
+              )}
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <ul>
+        {galleryImages.map((image) => (
+          <li>
+            <a href={image.link} class="focusable">
+              <div class={image.class} style={containerStyle(image, isMasonry)}>
+                <div class="gallery__inner">
+                  <img
+                    width={image.width}
+                    height={image.height}
+                    src={image.url}
+                    style={imgStyle(image, isMasonry)}
+                  />
+                </div>
+              </div>
+              {displayFilenames && !isMasonry && (
+                <p>{image.filename}</p>
+              )}
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div><!-- gallery -->
+)}

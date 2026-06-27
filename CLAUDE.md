@@ -3,6 +3,8 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > **Backend note:** This repo is developed with the DeepClaude proxy (`ANTHROPIC_BASE_URL=http://127.0.0.1:3200`), which routes Claude Code through a local proxy to the **DeepSeek** backend. To switch to Anthropic passthrough, run `/anthropic`.
+>
+> **See also [AGENTS.md](AGENTS.md)** — cross-agent gotchas shared by all tools and fan-out workers (Astro `<style>`/`<script>` interpolation traps, why a green build doesn't prove a component renders, component porting conventions).
 
 ## Build & dev commands
 

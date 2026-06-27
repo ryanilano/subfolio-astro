@@ -11,3 +11,5 @@ node_modules/
 npm-debug.log*
 # macOS
 .DS_Store
+# personal Claude Code config + hooks (not shared; fan-out workers don't push)
+.claude/

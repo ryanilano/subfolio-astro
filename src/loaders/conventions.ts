@@ -1,0 +1,111 @@
+/**
+ * File-naming convention primitives — a direct port of the hidden/position/
+ * enhancer logic from the PHP engine (Filebrowser.php), per
+ * subfolio/plans/spec/SPEC-conventions.md.
+ */
+
+export interface ConventionConfig {
+  infoExtension: string; // default ".info"
+  featureExtension: string; // default ".ftr"
+  shortcutExtension: string; // default ".cut"
+}
+
+export const DEFAULT_CONVENTION_CONFIG: ConventionConfig = {
+  infoExtension: ".info",
+  featureExtension: ".ftr",
+  shortcutExtension: ".cut",
+};
+
+/**
+ * Ports Filebrowser::is_hidden() (SPEC-conventions §1, §6). A name is hidden
+ * when it starts with "-" or ".", or ends with the info/feature/shortcut
+ * extension. Hidden items are skipped from normal listings but still read
+ * explicitly for position embeds and feature/shortcut lookups.
+ */
+export function isHidden(
+  name: string,
+  cfg: ConventionConfig = DEFAULT_CONVENTION_CONFIG,
+): boolean {
+  if (name.startsWith("-")) return true;
+  if (name.startsWith(".")) return true;
+  if (name.endsWith(cfg.infoExtension)) return true;
+  if (name.endsWith(cfg.featureExtension)) return true;
+  if (name.endsWith(cfg.shortcutExtension)) return true;
+  return false;
+}
+
+export type Position = "top" | "middle" | "bottom";
+
+const POSITION_PREFIX: Record<string, Position> = {
+  "-t-": "top",
+  "-m-": "middle",
+  "-b-": "bottom",
+};
+
+/**
+ * Maps a "-t-"/"-m-"/"-b-" prefix to its position, or null (SPEC-conventions
+ * §2, §7).
+ */
+export function positionOf(name: string): Position | null {
+  for (const [prefix, pos] of Object.entries(POSITION_PREFIX)) {
+    if (name.startsWith(prefix)) return pos;
+  }
+  return null;
+}
+
+/** Strips a leading position prefix if present. */
+export function stripPosition(name: string): string {
+  for (const prefix of Object.keys(POSITION_PREFIX)) {
+    if (name.startsWith(prefix)) return name.slice(prefix.length);
+  }
+  return name;
+}
+
+/** Lowercased extension without the dot, or "" if none. */
+export function extOf(name: string): string {
+  const dot = name.lastIndexOf(".");
+  if (dot <= 0) return ""; // no dot, or dotfile like ".access"
+  return name.slice(dot + 1).toLowerCase();
+}
+
+/** File enhancers carried by extension (SPEC-conventions §3). */
+export type FileEnhancer = "link" | "cut" | "pop" | "ftr" | "rss";
+/** Folder enhancers carried by extension. */
+export type FolderEnhancer = "slide" | "site" | "oplx";
+
+const FILE_ENHANCER_EXT: Record<string, FileEnhancer> = {
+  link: "link",
+  cut: "cut",
+  pop: "pop",
+  ftr: "ftr",
+  rss: "rss",
+};
+
+const FOLDER_ENHANCER_EXT: Record<string, FolderEnhancer> = {
+  slide: "slide",
+  site: "site",
+  oplx: "oplx",
+};
+
+export function fileEnhancerOf(name: string): FileEnhancer | null {
+  return FILE_ENHANCER_EXT[extOf(name)] ?? null;
+}
+
+export function folderEnhancerOf(name: string): FolderEnhancer | null {
+  return FOLDER_ENHANCER_EXT[extOf(name)] ?? null;
+}
+
+/**
+ * Display name: strip a leading position prefix, then strip the extension for
+ * enhancers whose extension is never shown (.link/.cut/.pop/.ftr/.rss and the
+ * folder enhancers .slide/.site/.oplx — mirrors FileFolder::fix_display_name).
+ * Other files keep their extension.
+ */
+export function displayName(name: string): string {
+  let out = stripPosition(name);
+  if (fileEnhancerOf(out) || folderEnhancerOf(out)) {
+    const dot = out.lastIndexOf(".");
+    if (dot > 0) out = out.slice(0, dot);
+  }
+  return out;
+}

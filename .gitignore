@@ -10,6 +10,8 @@ public/css/main.css
 public/css/icons.css
 # generated types
 .astro/
+# wrangler local state (cloudflare deploy)
+.wrangler/
 # deps
 node_modules/
 # env

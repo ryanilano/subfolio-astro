@@ -11,6 +11,7 @@
     "start": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && astro dev",
     "build": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && astro check && astro build",
     "preview": "astro preview",
+    "deploy": "npm run build && wrangler deploy",
     "astro": "astro"
   },
   "dependencies": {

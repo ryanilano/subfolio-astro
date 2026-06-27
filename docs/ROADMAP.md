@@ -40,10 +40,12 @@ side-by-side against identical content for diffing. No data migration.
   dropped the `/debug` route at cutover. Deferred behaviors (sharp dimensions, RSS fetch,
   Textile/MD body rendering, `-access`) remain captured as parsed intent. See
   [spec/SPEC-theme-api.md](./spec/SPEC-theme-api.md) and [spec/SPEC-filekinds.md](./spec/SPEC-filekinds.md).
-- **Phase 3 — Build pipeline & deploy.** `sharp` thumbnails at build (resize-if-stale per
-  [spec/SPEC-thumbnails.md](./spec/SPEC-thumbnails.md)), RSS fetch at build, `sass`,
-  sitemap; deploy to Cloudflare Pages via Wrangler (mirror `ilano-fyi`). Diff side-by-side
-  against the live PHP app on the same content.
+- **Phase 3 — Build pipeline & deploy.** ✅ **DONE.** `sharp` thumbnails at build
+  (resize-if-stale per [spec/SPEC-thumbnails.md](./spec/SPEC-thumbnails.md)), RSS fetch at
+  build, `sass`, sitemap; deploy to Cloudflare via Wrangler using the **Workers
+  static-assets** pattern (`wrangler.jsonc` → `assets.directory: ./dist`, `npm run deploy`),
+  mirroring the current `ilano-fyi` setup (which moved off the Pages adapter). Diff
+  side-by-side against the live PHP app on the same content.
 - **Phase 4 — Auth Worker (deferred / optional).** *Only if* access-gated folders become a
   real requirement: a Cloudflare Worker for login, sessions (KV), `-access` evaluation, and
   gated file serving. Web Crypto/`scrypt` for hashing. See
@@ -57,6 +59,6 @@ side-by-side against identical content for diffing. No data migration.
 - [x] Phase 0 — Capture the spec
 - [x] Phase 1 — Astro content loader
 - [x] Phase 2 — Themes → Astro components
-- [ ] Phase 3 — Build pipeline & deploy (Cloudflare Pages) ← **next**
+- [x] Phase 3 — Build pipeline & deploy (Cloudflare Workers static-assets)
 - [ ] Phase 4 — Auth Worker (deferred / optional)
-- [ ] Phase 5 — Enhancer polish
+- [ ] Phase 5 — Enhancer polish ← **next**

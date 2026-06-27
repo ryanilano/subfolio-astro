@@ -15,6 +15,10 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve, extname } from "node:path";
 
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
+// Pre-generated auto thumbnails live out-of-tree (scripts/gen-thumbs.mjs). They
+// are served under the same /directory/ namespace, so the route walker and GET
+// handler fall back to this cache for any path not present in the content root.
+const cacheRoot = resolve(process.env.SUBFOLIO_THUMB_CACHE ?? "./.thumb-cache");
 
 /** Minimal extension → MIME map (mirrors the PHP mime_content_type table). */
 const MIME: Record<string, string> = {
@@ -45,9 +49,9 @@ function mimeFor(name: string): string {
   return MIME[extname(name).toLowerCase()] ?? "application/octet-stream";
 }
 
-/** Recursively collect every real file under the content root, "/"-relative. */
-function walkFiles(relDir: string, out: string[]): void {
-  const absDir = join(contentRoot, relDir);
+/** Recursively collect every real file under `root`, "/"-relative. */
+function walkFiles(root: string, relDir: string, out: string[]): void {
+  const absDir = join(root, relDir);
   let entries: string[];
   try {
     entries = readdirSync(absDir);
@@ -63,29 +67,50 @@ function walkFiles(relDir: string, out: string[]): void {
     } catch {
       continue;
     }
-    if (isDir) walkFiles(relPath, out);
+    if (isDir) walkFiles(root, relPath, out);
     else out.push(relPath);
   }
 }
 
 export function getStaticPaths() {
-  const files: string[] = [];
-  walkFiles("", files);
-  return files.map((relPath) => ({ params: { path: relPath } }));
+  // Union of content files and pre-generated cache thumbnails. The cache may add
+  // -thumbnails/ paths the content tree doesn't have; dedupe in case both carry
+  // the same path (content wins at serve time below).
+  const paths = new Set<string>();
+  const contentFiles: string[] = [];
+  walkFiles(contentRoot, "", contentFiles);
+  contentFiles.forEach((p) => paths.add(p));
+  const cacheFiles: string[] = [];
+  walkFiles(cacheRoot, "", cacheFiles);
+  cacheFiles.forEach((p) => paths.add(p));
+  return [...paths].map((relPath) => ({ params: { path: relPath } }));
+}
+
+/** Resolve a "/"-relative request path against a root, rejecting traversal. */
+function safeResolve(root: string, relPath: string): string | null {
+  const abs = resolve(root, relPath);
+  if (abs !== root && !abs.startsWith(root + "/")) return null;
+  return abs;
 }
 
 export const GET: APIRoute = ({ params }) => {
   const relPath = params.path ?? "";
-  // Guard against path traversal — resolved target must stay under contentRoot.
-  const abs = resolve(contentRoot, relPath);
-  if (abs !== contentRoot && !abs.startsWith(contentRoot + "/")) {
+  // Serve from content first, then the out-of-tree thumbnail cache. Both are
+  // traversal-guarded; content wins if a path somehow exists in both.
+  const absContent = safeResolve(contentRoot, relPath);
+  const absCache = safeResolve(cacheRoot, relPath);
+  if (absContent === null && absCache === null) {
     return new Response("Forbidden", { status: 403 });
   }
   let body: Buffer;
   try {
-    body = readFileSync(abs);
+    body = readFileSync(absContent as string);
   } catch {
-    return new Response("Not found", { status: 404 });
+    try {
+      body = readFileSync(absCache as string);
+    } catch {
+      return new Response("Not found", { status: 404 });
+    }
   }
   // Copy into a fresh ArrayBuffer-backed view. node's Buffer is typed over
   // ArrayBufferLike (incl. SharedArrayBuffer), which astro check won't accept

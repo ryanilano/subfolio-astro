@@ -11,6 +11,7 @@ import { join } from "node:path";
 import type { ChildFile } from "../loaders/schema.ts";
 import type { FileKind } from "../loaders/filekinds.ts";
 import { assetUrl } from "./routing.ts";
+import { imageMetaFor } from "./imageMeta.ts";
 
 /** The complete shape a filekind view receives — ChildFile + computed extras. */
 export interface FileViewData {
@@ -120,10 +121,10 @@ export interface FileViewContext {
  * Build the full FileViewData from a ChildFile + disk context.
  * Mirrors Subfolio::current_file() for each key.
  */
-export function buildFileViewData(
+export async function buildFileViewData(
   file: ChildFile,
   ctx: FileViewContext,
-): FileViewData {
+): Promise<FileViewData> {
   const absPath = join(ctx.contentRoot, ctx.relPath);
   // Raw bytes live under /directory/ (mirrors Filebrowser::get_file_url()).
   const url = assetUrl(ctx.relPath);
@@ -172,6 +173,13 @@ export function buildFileViewData(
     if (age < 7 * 24 * 60 * 60 * 1000) tag = "new";
   } catch { /* */ }
 
+  // Image dimensions + retina/shadow/browser suffixes (sharp, build-time).
+  // Non-image kinds get zeroed dimensions and false flags, same as before.
+  const img =
+    file.kind === "img"
+      ? await imageMetaFor(ctx.relPath)
+      : { width: 0, height: 0, isRetina: false, hasShadow: false, hasBrowser: false };
+
   return {
     name: file.name,
     displayName: file.displayName,
@@ -183,16 +191,16 @@ export function buildFileViewData(
     linkPayload: file.link,
     popupPayload: file.popup,
 
-    width: 0,               // Phase 3 sharp
-    height: 0,              // Phase 3 sharp
+    width: img.width,
+    height: img.height,
     iconGrid: `grid_${file.icon}`,
     iconName: file.icon,
     tag,
     url,
-    retina: null,           // Phase 3
-    isRetina: false,        // Phase 3
-    hasShadow: false,       // Phase 3
-    hasBrowser: false,      // Phase 3
+    retina: img.isRetina ? url : null,
+    isRetina: img.isRetina,
+    hasShadow: img.hasShadow,
+    hasBrowser: img.hasBrowser,
     link,
     target,
     filename: file.displayName,

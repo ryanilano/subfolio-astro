@@ -124,7 +124,7 @@ if (props.kind === "folder") {
     display: props.entry.enhancerFolder === "oplx" ? "OmniPlan File" : "Mini Site",
     enhancer: null,
   };
-  fileView = buildFileViewData(folderAsFile, {
+  fileView = await buildFileViewData(folderAsFile, {
     contentRoot,
     folderPath: props.entry.path === "." ? "" : `${props.entry.path}/`,
     kinds,
@@ -140,7 +140,7 @@ if (props.kind === "folder") {
   title = props.file.displayName;
   const relPath =
     props.entry.path === "." ? props.file.name : `${props.entry.path}/${props.file.name}`;
-  fileView = buildFileViewData(props.file, {
+  fileView = await buildFileViewData(props.file, {
     contentRoot,
     folderPath: props.entry.path === "." ? "" : `${props.entry.path}/`,
     kinds,

@@ -4,13 +4,16 @@
   "version": "0.1.0",
   "description": "Subfolio reimagined as an Astro static site — a folder on disk becomes a themeable web gallery, no database, content authored by file-naming conventions.",
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro check && astro build",
+    "gen-thumbs": "node scripts/gen-thumbs.mjs",
+    "gen-css": "node scripts/gen-css.mjs",
+    "dev": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && astro dev",
+    "start": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && astro dev",
+    "build": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && astro check && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/sitemap": "^3.7.3",
     "astro": "^6.4.2",
     "sharp": "^0.34.5",
     "yaml": "^2.6.1"

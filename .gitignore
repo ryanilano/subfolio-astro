@@ -1,5 +1,11 @@
 # build output
 dist/
+# pre-generated thumbnail cache (scripts/gen-thumbs.mjs)
+.thumb-cache/
+# generated CSS + icon Sass map (scripts/gen-css.mjs) — compiled from src/styles + src/img/svg_source
+src/img/_icons.scss
+public/css/main.css
+public/css/icons.css
 # generated types
 .astro/
 # deps

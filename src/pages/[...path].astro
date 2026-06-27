@@ -16,6 +16,8 @@ import Layout from "../layouts/Layout.astro";
 import Listing from "../components/listing/Listing.astro";
 import { loadFileKinds } from "../loaders/filekinds.ts";
 import { buildFileViewData, type FileViewData } from "../lib/fileHelpers.ts";
+import { rssItemsFor, type RssItem } from "../lib/rssFeed.ts";
+import Rss from "../components/filekinds/Rss.astro";
 import {
   componentForKind,
   buildBreadcrumb,
@@ -73,9 +75,10 @@ export async function getStaticPaths() {
       props: { kind: "folder", entry },
     });
 
-    // Regular files (non-enhancer) → individual detail pages.
+    // Regular files → individual detail pages. .link/.pop are listing anchors
+    // only (no detail page), but .rss files get a real detail view (rss.php).
     for (const file of entry.files) {
-      if (file.enhancer !== null) continue; // .link/.pop are listing anchors only
+      if (file.enhancer === "link" || file.enhancer === "pop") continue;
       const filePath = entry.path === "." ? file.name : `${entry.path}/${file.name}`;
       routes.push({
         params: { path: filePath },
@@ -101,6 +104,7 @@ let isRoot = false;
 
 let fileView: FileViewData | null = null;
 let DetailComponent: ReturnType<typeof componentForKind> | null = null;
+let rssItems: RssItem[] = [];
 
 if (props.kind === "folder") {
   breadcrumb = buildBreadcrumb(props.entry.path);
@@ -147,6 +151,9 @@ if (props.kind === "folder") {
     relPath,
   });
   DetailComponent = componentForKind(props.file.kind);
+  if (props.file.kind === "rss") {
+    rssItems = rssItemsFor(fileView.feedurl, fileView.count);
+  }
   const nav = fileSiblingNav(props.entry, props.file.name);
   prevLink = nav.prevLink;
   nextLink = nav.nextLink;
@@ -180,7 +187,11 @@ const redirectTo = props.kind === "redirect" ? props.to : null;
       nextLink={nextLink}
     >
       {props.kind === "folder" && <Listing entry={props.entry} />}
-      {DetailComponent && fileView && <DetailComponent file={fileView} />}
+      {fileView && fileView.kind === "rss" ? (
+        <Rss file={fileView} items={rssItems} />
+      ) : (
+        DetailComponent && fileView && <DetailComponent file={fileView} />
+      )}
     </Layout>
   )
 }

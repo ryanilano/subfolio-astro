@@ -6,12 +6,14 @@
  * Renders text, image, and RSS embeds at a given position (top/middle/bottom).
  * Consumes entry.embeds.{top,middle,bottom} filtered by the `position` prop.
  *
- * Deferred: RSS items (Phase 3 fetch), text rendering (Phase 5 Textile/MD),
- * image dimensions (Phase 3 sharp).
+ * RSS items are read from the build-time cache (scripts/gen-rss.mjs →
+ * src/lib/rssFeed.ts), mirroring upstream _inline_rss.php. Deferred: text
+ * rendering (Phase 5 Textile/MD).
  *
  * Wave component — C16.
  */
 import { assetUrl } from "../../lib/routing.ts";
+import { rssItemsFor } from "../../lib/rssFeed.ts";
 import type { Embed } from "../../loaders/schema.ts";
 
 interface Props {
@@ -46,10 +48,15 @@ const rssEmbeds = embeds.filter((e) => e.type === "rss");
 }
 
 {
-  rssEmbeds.length > 0 &&
-    rssEmbeds.map((_rss) => (
-      <ul class="rss">
-        <!-- RSS items deferred to Phase 3 (HTTP fetch) -->
-      </ul>
-    ))
+  rssEmbeds.map((rss) => (
+    <ul class="rss">
+      {rssItemsFor(rss.feedurl, rss.count).map((item) => (
+        <li class="standard_paragraph item">
+          <h4>{item.title}</h4>
+          <p>{item.description}</p>
+          <p><a target="_blank" href={item.link}>Read more</a></p>
+        </li>
+      ))}
+    </ul>
+  ))
 }

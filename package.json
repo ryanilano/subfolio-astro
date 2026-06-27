@@ -6,15 +6,17 @@
   "scripts": {
     "gen-thumbs": "node scripts/gen-thumbs.mjs",
     "gen-css": "node scripts/gen-css.mjs",
-    "dev": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && astro dev",
-    "start": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && astro dev",
-    "build": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && astro check && astro build",
+    "gen-rss": "node scripts/gen-rss.mjs",
+    "dev": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && astro dev",
+    "start": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && astro dev",
+    "build": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && astro check && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
     "astro": "^6.4.2",
+    "rss-parser": "^3.13.0",
     "sharp": "^0.34.5",
     "yaml": "^2.6.1"
   },

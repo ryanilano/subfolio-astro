@@ -6,10 +6,11 @@
  * deferred (Textile/MD → Phase 5), retina/shadow/browser detection deferred
  * (sharp → Phase 3).
  */
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { ChildFile } from "../loaders/schema.ts";
 import type { FileKind } from "../loaders/filekinds.ts";
+import { parseSubfolioYaml, asNumber, asString } from "../loaders/yaml.ts";
 import { assetUrl } from "./routing.ts";
 import { imageMetaFor } from "./imageMeta.ts";
 
@@ -84,6 +85,15 @@ export interface FileViewData {
 }
 
 const DEFAULT_TARGET = "_blank";
+
+/** Read a file as UTF-8, "" on any error (lenient, like the loader). */
+function safeReadText(abs: string): string {
+  try {
+    return readFileSync(abs, "utf8");
+  } catch {
+    return "";
+  }
+}
 
 /** Format bytes as human-readable size (mirrors PHP format::filesize). */
 function formatSize(bytes: number): string {
@@ -180,6 +190,19 @@ export async function buildFileViewData(
       ? await imageMetaFor(ctx.relPath)
       : { width: 0, height: 0, isRetina: false, hasShadow: false, hasBrowser: false };
 
+  // RSS feed params from the .rss file body (YAML). The feed itself is fetched
+  // in the pre-build pass (scripts/gen-rss.mjs); here we surface the params the
+  // route uses to look the cached items up via rssItemsFor().
+  let feedurl = "";
+  let count = 10;
+  let cache = 3600;
+  if (file.kind === "rss") {
+    const doc = parseSubfolioYaml(safeReadText(absPath));
+    feedurl = asString(doc.feedurl) ?? "";
+    count = asNumber(doc.count, 10);
+    cache = asNumber(doc.cache, 3600);
+  }
+
   return {
     name: file.name,
     displayName: file.displayName,
@@ -211,9 +234,9 @@ export async function buildFileViewData(
     autoplay: "",
     kindLabel: file.display,
     extension,
-    feedurl: "",            // Phase 3 (RSS fetch)
-    count: 10,
-    cache: 3600,
+    feedurl,
+    count,
+    cache,
     instructions,
     body: "",               // Phase 5 (Textile/MD rendering)
     archive: `/${ctx.folderPath}`,  // For .oplx

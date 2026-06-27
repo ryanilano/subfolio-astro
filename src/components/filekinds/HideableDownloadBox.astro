@@ -1,0 +1,19 @@
+---
+/**
+ * Hideable download box — ported from upstream _hideable_download_box.php.
+ * Wraps DownloadBox.astro in the #info toggler.
+ */
+import DownloadBox from "./DownloadBox.astro";
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+interface Props {
+  file: FileViewData;
+}
+---
+
+<div id="info">
+  <a href="#" id="info-button" class="icon icon__info" data-behavior="show_info">i</a>
+  <div id="info-box" class="hide">
+    <DownloadBox file={Astro.props.file} />
+  </div>
+</div>

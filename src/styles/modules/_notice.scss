@@ -1,0 +1,41 @@
+#notice,
+#content #notice {
+  overflow: hidden;
+  position:fixed;
+  width:100%;
+  bottom:0;
+  left:0;
+  color:$color-text;
+  background-color: $color-notice; /* << text_light_color */
+  margin:0;
+  z-index:$z-index__notice;
+  animation: hide_notice 0.4s ease-out 3s forwards;
+
+  p {
+    display:block;
+    padding: 0 $gutter;
+    height:70px;
+    line-height:70px;
+    text-align:center;
+    @include ellipsis();
+
+    @include breakpoint(small-and-down) {
+      padding: 0 $gutter-mobile;
+    }
+  }
+
+  &.error {
+    background-color: #FF0000;
+    color:$color-bg;
+  }
+}
+
+
+@keyframes hide_notice {
+  0% {
+    transform: translateY(0%);
+  }
+  100% {
+    transform: translateY(101%);
+  }
+}

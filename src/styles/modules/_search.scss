@@ -1,0 +1,103 @@
+.search {
+  position:fixed;
+  background:rgba($color-bg, 0.95);
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  padding: $gutter;
+
+  @include breakpoint(small-and-down) {
+    padding: $gutter-mobile;
+  }
+
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  display:none;
+  z-index:$z-index__search;
+
+  input {
+    display: block;
+    width: 100%;
+    margin: 0;
+    border: 0 none;
+    background: transparent;
+    color: $color-text;
+    font: 48px/1 $sans-serif;
+    -webkit-appearance:none;
+    outline: none;
+
+    @include breakpoint(medium-and-down) {
+      font-size:30px;
+    }
+  }
+
+  form {
+    margin-bottom:$half-gutter;
+    overflow:hidden;
+    width:100%;
+  }
+
+  .icon__close {
+    position:fixed;
+    top: $gutter;
+    right: $gutter;
+    z-index:$z-index__search + 1;
+
+    &:hover {
+      opacity:0.5;
+    }
+  }
+
+  .listing {
+    background:$color-bg;
+  }
+}
+
+.search__active {
+  height:100%;
+  width:100%;
+  overflow:hidden;
+
+
+  .search {
+    display:block;
+  }
+}
+
+/*.search__results {
+  border-color:$color-border-light;
+
+  article {
+    border-top-width:1px;
+    border-color:$color-border-light;
+    padding:20px 0;
+  }
+}*/
+
+.page,
+.page.search__active {
+  .search {
+    display:none;
+  }
+}
+
+.search__dropdown {
+  min-height:50px;
+  line-height:25px;
+  color: $color-text-secondary;
+
+  &:before {
+    content:'Try these popular keywords : ';
+  }
+
+  a {
+    display:inline-block;
+    padding:0 5px;
+    text-decoration:underline;
+
+    &:focus {
+      color:$color-text-secondary;
+    }
+  }
+}

@@ -1,0 +1,129 @@
+/* @group Grid */
+
+/* --------------------------------------------------------------
+   MODULES: CONTENT / LISTING GRID VIEW
+-------------------------------------------------------------- */
+
+.listing .list--grid {
+  width:100%;
+  overflow:hidden;
+
+  .list__row {
+    display:block;
+    text-align:center;
+    float:left;
+    width:16.666667%;
+    max-width:200px;
+    padding:$half-gutter;
+
+    @include breakpoint(xlarge-and-up) {
+      height: 150px;
+      overflow: hidden;
+    }
+
+    @include breakpoint(large) {
+      width:20%;
+      &:nth-child(5n + 1) {
+        clear: left;
+      }
+    }
+
+    @include breakpoint(medium) {
+      width:25%;
+      &:nth-child(4n + 1) {
+        clear: left;
+      }
+    }
+
+    @include breakpoint(small-and-down) {
+      width:50%;
+      max-width:500px;
+      &:nth-child(2n + 1) {
+        clear: left;
+      }
+    }
+
+    .list__cell--filenameicon {
+      padding-left:0;
+      padding-right:0;
+    }
+  }
+
+  .list__cell {
+    display:block;
+  }
+
+  a.list__row:hover,
+  a.list__row:focus {
+    background-color:$color-hover;
+  }
+
+  .list__cell--filenameicon {
+    min-height:68.5px;
+    padding-bottom:$half-gutter/2;
+    display:block;
+    padding-left:0;
+    padding-right:0;
+
+    i {
+      display:block;
+      width:100%;
+      height:61px;
+      background-position:50% 50%;
+    }
+  }
+
+  .list__cell--size,
+  .list__cell--date,
+  .list__cell--kind,
+  .list__cell--updated {
+    display: none !important;
+  }
+
+  a.list__row--empty,
+  a.list__row--empty * {
+    cursor:default;
+    color:$color-text-tertiary;
+
+    .icon {
+      opacity:0.5;
+    }
+
+    &:hover {
+      background-color:$color-bg;
+    }
+  }
+
+  .list__cell--filename {
+    padding-right:0;
+    padding-left:0;
+  }
+}
+
+/*
+  @mixin dot
+*/
+@mixin dot() {
+  border-radius:50%;
+  width:8px;
+  height:8px;
+  background:$color-text-tertiary;
+}
+
+#listing {
+  .grid .updated,
+  .column .updated {
+    display:block;
+    vertical-align:middle;
+    @include dot();
+
+    &.updated--new {
+      background:$color-new;
+    }
+  }
+}
+
+
+
+
+/* @end */

@@ -1,0 +1,42 @@
+---
+/**
+ * Footer — ported from upstream layouts/footer.inc.php.
+ *
+ * Phase 2 (static): no auth state. Updated-since links are rendered as spans
+ * (no active filter state without server-side cookies). Search box is
+ * admin-only; omitted until Phase 4.
+ */
+import { siteConfig } from "../lib/site.ts";
+import { t } from "../lib/i18n.ts";
+
+interface Props {
+  displayCopyright?: boolean;
+  displayUpdatedSince?: boolean;
+  copyright?: string;
+}
+
+const {
+  displayCopyright = true,
+  displayUpdatedSince = true,
+  copyright: copy = siteConfig.site_copyright || "",
+} = Astro.props;
+---
+
+<footer class="footer" id="footer">
+  <div class="footer__copyright">
+    {displayCopyright && copy && <span class="copyright__text">{copy}</span>}
+  </div>
+
+  {
+    displayUpdatedSince && (
+      <div class="footer__updatedsince">
+        <span>{t("updated_since")}</span>
+        <span class="faded">{t("last_week")}</span>
+        <span class="updatedsince__sep">&#8226;</span>
+        <span class="faded">{t("last_month")}</span>
+        <span class="updatedsince__sep">&#8226;</span>
+        <span class="faded">{t("my_last_visit")}</span>
+      </div>
+    )
+  }
+</footer>

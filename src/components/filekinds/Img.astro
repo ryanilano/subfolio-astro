@@ -1,0 +1,54 @@
+---
+/**
+ * Image filekind view — ported from upstream pages/filekinds/img.php.
+ *
+ * This is the reference pattern all Wave filekind workers mirror:
+ *  - Consumes a FileViewData prop
+ *  - Preserves PHP markup classes and structure for visual diffing
+ *  - Conditionally inlines image or falls back to the download box
+ *
+ * Gate component — built in Opus, not offloaded.
+ */
+import { siteConfig } from "../../lib/site.ts";
+import HideableDownloadBox from "./HideableDownloadBox.astro";
+import DownloadBox from "./DownloadBox.astro";
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+interface Props {
+  file: FileViewData;
+}
+
+const f = Astro.props.file;
+const maxSizeBytes = siteConfig.display_max_filesize * 1024 * 1024;
+const tooBig = f.rawsize > maxSizeBytes;
+// Phase 3: retina, shadow, browser deferred (always false in Phase 2)
+const hasShadow = f.hasShadow;
+const hasBrowser = f.hasBrowser;
+const isRetina = f.isRetina;
+const shadowStyle = siteConfig.shadow_style_css;
+---
+
+{
+  tooBig ? (
+    <DownloadBox file={f} />
+  ) : (
+    <>
+      {
+        hasShadow ? (
+          <div class="detailIMG__wrapper" style={`box-shadow:${shadowStyle};`}>
+            <img width={f.width} height={f.height} src={f.url} class="detailIMG" data-behavior="toggle_img" />
+          </div>
+        ) : hasBrowser ? (
+          <div class="detailIMG__wrapper detailIMG__wrapper--browser" style={`box-shadow:${shadowStyle};`}>
+            <img width={f.width} height={f.height} src={f.url} class="detailIMG" data-behavior="toggle_img" />
+          </div>
+        ) : isRetina ? (
+          <img width={f.width / 2} height={f.height / 2} src={f.url} class="detailIMG" data-behavior="toggle_img" />
+        ) : (
+          <img width={f.width} height={f.height} src={f.url} class="detailIMG" data-behavior="toggle_img" />
+        )
+      }
+      <HideableDownloadBox file={f} />
+    </>
+  )
+}

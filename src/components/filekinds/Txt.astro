@@ -17,8 +17,6 @@ const f = Astro.props.file;
 const displayInfo = defaultOptions.display_info;
 ---
 
-<div class="standard_paragraph">
-  {f.body}
-</div>
+<div class="standard_paragraph" set:html={f.body} />
 
 {displayInfo && <HideableDownloadBox file={f} />}

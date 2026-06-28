@@ -51,8 +51,14 @@ side-by-side against identical content for diffing. No data migration.
   gated file serving. Web Crypto/`scrypt` for hashing. See
   [spec/SPEC-auth.md](./spec/SPEC-auth.md) and [spec/SPEC-access.md](./spec/SPEC-access.md).
   **Skipped entirely until the need is real.** Until it exists, everything served is public.
-- **Phase 5 — Enhancer polish.** `.oplx` build-time zip artifacts, `.pop`/`.slide` client
-  behaviors, Markdown (`@astrojs/mdx`) + Textile rendering parity.
+- **Phase 5 — Enhancer polish.** ✅ **DONE.** **Markdown body rendering**
+  (remark/unified, replacing the deferred Textile/MD intent — `.txt` detail views + `-t-/-m-
+  /-b-` text embeds; default engine switched textile→markdown, fixture content converted);
+  **`.pop` popups** verified working (`A17.Helpers.pop` in the bundled JS); **`.slide`**
+  fixed (the redirect now emits the first file's detail page — was 404ing — plus prev/next
+  stepping and the breadcrumb "HACK FOR SLIDE" parent-link port); **`.oplx` build-time zip
+  artifacts** (pre-build `scripts/gen-oplx.mjs` zips each `.oplx` folder into an out-of-tree
+  cache served at `/directory/<folder>.zip`, mirroring the thumbnail-cache pattern).
 
 ## Status
 
@@ -61,4 +67,4 @@ side-by-side against identical content for diffing. No data migration.
 - [x] Phase 2 — Themes → Astro components
 - [x] Phase 3 — Build pipeline & deploy (Cloudflare Workers static-assets)
 - [ ] Phase 4 — Auth Worker (deferred / optional)
-- [ ] Phase 5 — Enhancer polish ← **next**
+- [x] Phase 5 — Enhancer polish (Markdown + `.pop` + `.slide` + `.oplx` zip)

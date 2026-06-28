@@ -16,6 +16,7 @@ import Layout from "../layouts/Layout.astro";
 import Listing from "../components/listing/Listing.astro";
 import { loadFileKinds } from "../loaders/filekinds.ts";
 import { buildFileViewData, type FileViewData } from "../lib/fileHelpers.ts";
+import type { Renderer } from "../lib/renderText.ts";
 import { rssItemsFor, type RssItem } from "../lib/rssFeed.ts";
 import Rss from "../components/filekinds/Rss.astro";
 import {
@@ -31,6 +32,8 @@ import type { FolderEntry, ChildFile } from "../loaders/schema.ts";
 // build runtime, not into dist/. Mirrors src/content.config.ts.
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 const filekindsPath = resolve("./config/filekinds.yml");
+// Text render engine — same env knob the loader reads (src/content.config.ts).
+const renderer = (process.env.SUBFOLIO_TEXT_RENDERING ?? "markdown") as Renderer;
 
 type RouteProps =
   | { kind: "folder"; entry: FolderEntry }
@@ -57,6 +60,19 @@ export async function getStaticPaths() {
         params: { path: paramFor(entry.path) },
         props: { kind: "redirect", to: pageUrl(target) },
       });
+      // NB: do NOT `continue` — the redirect points at the first file's detail
+      // page (mirroring PHP get_link(slide_files[0])), so those detail pages
+      // must still be emitted by the file loop below. Skipping them 404s the
+      // slideshow. The folder *listing* is replaced by the redirect, but the
+      // per-file routes are not.
+      for (const file of entry.files) {
+        if (file.enhancer === "link" || file.enhancer === "pop") continue;
+        const filePath = entry.path === "." ? file.name : `${entry.path}/${file.name}`;
+        routes.push({
+          params: { path: filePath },
+          props: { kind: "file", entry, file },
+        });
+      }
       continue;
     }
 
@@ -94,6 +110,19 @@ const props = Astro.props as RouteProps;
 const allEntries = (await getCollection("folders")).map((e) => e.data);
 const kinds = loadFileKinds(filekindsPath);
 
+// "HACK FOR SLIDE" (ports Subfolio::parent_link): map each redirecting .slide
+// folder → its redirect target so breadcrumb crumbs link straight to the first
+// image instead of bouncing through the folder's meta-refresh. Only .slide
+// folders with direct files redirect; listing-only .slide folders are excluded.
+const slideRedirects = new Map<string, string>();
+for (const e of allEntries) {
+  if (e.enhancerFolder === "slide" && e.files.length > 0) {
+    const first = e.files[0];
+    const target = e.path === "." ? first.name : `${e.path}/${first.name}`;
+    slideRedirects.set(e.path, pageUrl(target));
+  }
+}
+
 // --- Resolve view data per kind ---------------------------------------------
 let title = "";
 let pageClass = "";
@@ -107,14 +136,14 @@ let DetailComponent: ReturnType<typeof componentForKind> | null = null;
 let rssItems: RssItem[] = [];
 
 if (props.kind === "folder") {
-  breadcrumb = buildBreadcrumb(props.entry.path);
+  breadcrumb = buildBreadcrumb(props.entry.path, slideRedirects);
   isRoot = props.entry.path === ".";
   title = props.entry.path === "." ? "" : props.entry.displayName;
   const nav = folderSiblingNav(props.entry, allEntries);
   prevLink = nav.prevLink;
   nextLink = nav.nextLink;
 } else if (props.kind === "single") {
-  breadcrumb = buildBreadcrumb(props.entry.path);
+  breadcrumb = buildBreadcrumb(props.entry.path, slideRedirects);
   // .site/.oplx folder rendered as a single file-detail view. Synthesize a
   // ChildFile from the folder so buildFileViewData/componentForKind apply.
   pageClass = "page--detail";
@@ -133,13 +162,14 @@ if (props.kind === "folder") {
     folderPath: props.entry.path === "." ? "" : `${props.entry.path}/`,
     kinds,
     relPath: props.entry.path,
+    renderer,
   });
   DetailComponent = componentForKind(props.entry.enhancerFolder ?? "");
 } else if (props.kind === "file") {
   // Regular file detail.
   const relPathForCrumb =
     props.entry.path === "." ? props.file.name : `${props.entry.path}/${props.file.name}`;
-  breadcrumb = buildBreadcrumb(relPathForCrumb);
+  breadcrumb = buildBreadcrumb(relPathForCrumb, slideRedirects);
   pageClass = "page--detail";
   title = props.file.displayName;
   const relPath =
@@ -149,6 +179,7 @@ if (props.kind === "folder") {
     folderPath: props.entry.path === "." ? "" : `${props.entry.path}/`,
     kinds,
     relPath,
+    renderer,
   });
   DetailComponent = componentForKind(props.file.kind);
   if (props.file.kind === "rss") {

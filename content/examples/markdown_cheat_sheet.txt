@@ -1,0 +1,72 @@
+# Subfolio Enhancers
+
+## Markdown cheat sheet
+
+### Using markup in enhancers
+
+Markup can be used to style text within enhancers files. Subfolio renders enhancer text with Markdown by default; you can change this to plain text in your general settings.
+
+***
+
+# Header 1
+
+<pre><code># Header 1</code></pre>
+
+## Header 2
+
+<pre><code>## Header 2</code></pre>
+
+### Header 3
+
+<pre><code>### Header 3</code></pre>
+
+This is *italicized*
+
+<pre><code>This is *italicized*</code></pre>
+
+This is **bold**
+
+<pre><code>This is **bold**</code></pre>
+
+- Bulleted item 1
+- Bulleted item 2
+
+<pre><code>- Bulleted item 1
+- Bulleted item 2</code></pre>
+
+1. Numbered item 1
+2. Numbered item 2
+
+<pre><code>1. Numbered item 1
+2. Numbered item 2</code></pre>
+
+[text link](http://area17.com)
+
+<pre><code>[text link](http://area17.com)</code></pre>
+
+*Embed an image:*
+
+<pre><code>![alt text](http://www.example.com/image.png)</code></pre>
+
+> Blockquoted Text
+
+<pre><code>> Blockquoted Text</code></pre>
+
+*Embed Code:*
+
+To get this:
+
+<pre><code>/* Code Block */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+  int main()
+</code></pre>
+
+Do this:
+
+<pre><code>```
+/* Code Block */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+      int main()
+```</code></pre>

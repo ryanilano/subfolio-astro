@@ -81,7 +81,17 @@ export interface Crumb {
  * page; the last crumb has an empty url (rendered as current — see Header.astro).
  * The root ("." / "") yields an empty trail (Header shows the site root itself).
  */
-export function buildBreadcrumb(path: string): Crumb[] {
+export function buildBreadcrumb(
+  path: string,
+  /**
+   * Ports the PHP "HACK FOR SLIDE" (Subfolio::parent_link). A `.slide` folder
+   * with direct files renders a redirect, not a listing — so a breadcrumb crumb
+   * pointing at it would bounce the user through a meta-refresh back to the first
+   * image. Map any such folder path → its redirect target (the first image's
+   * detail page) so the crumb links straight there instead of looping.
+   */
+  slideRedirects?: Map<string, string>,
+): Crumb[] {
   if (path === "" || path === ".") return [];
   const segments = path.split("/");
   const crumbs: Crumb[] = [];
@@ -89,9 +99,10 @@ export function buildBreadcrumb(path: string): Crumb[] {
   segments.forEach((seg, i) => {
     cumulative = cumulative ? `${cumulative}/${seg}` : seg;
     const isLast = i === segments.length - 1;
+    const slideTarget = slideRedirects?.get(cumulative);
     crumbs.push({
       name: displayName(seg),
-      url: isLast ? "" : pageUrl(cumulative),
+      url: isLast ? "" : (slideTarget ?? pageUrl(cumulative)),
     });
   });
   return crumbs;

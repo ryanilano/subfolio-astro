@@ -4,6 +4,8 @@ dist/
 .thumb-cache/
 # pre-fetched RSS feed cache (scripts/gen-rss.mjs)
 .rss-cache/
+# pre-built .oplx zip cache (scripts/gen-oplx.mjs)
+.oplx-cache/
 # generated CSS + icon Sass map (scripts/gen-css.mjs) — compiled from src/styles + src/img/svg_source
 src/img/_icons.scss
 public/css/main.css

@@ -43,7 +43,7 @@ const rssEmbeds = embeds.filter((e) => e.type === "rss");
   imageEmbeds.length > 0 && (
     <div id={`inline_${position}_image`}>
       {imageEmbeds.map((image) => (
-        <img src={assetUrl(image.src)} />
+        <img src={assetUrl(image.src)} alt="" />
       ))}
       <div class="clear"><!-- --></div>
     </div>

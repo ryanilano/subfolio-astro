@@ -27,9 +27,15 @@
     "@astrojs/check": "^0.9.9",
     "@types/node": "^26.0.1",
     "archiver": "^8.0.0",
+    "browserslist": "^4.28.4",
     "lightningcss": "^1.32.0",
+    "mini-svg-data-uri": "^1.4.4",
     "sass": "^1.97.3",
+    "svgo": "^4.0.1",
     "typescript": "^5.9.3",
     "wrangler": "^4.87.0"
-  }
+  },
+  "browserslist": [
+    "defaults"
+  ]
 }

@@ -8,19 +8,26 @@
  * task) and never checked in. Without it, `sass src/styles/main.scss` fails with
  * "Can't find stylesheet to import". So this script reproduces that step: it builds
  * src/img/_icons.scss from the vendored SVG sources, then compiles both entrypoints
- * with dart-sass and adds vendor prefixes via lightningcss (mirroring upstream's
- * autoprefixer postcss step). Goal is VISUAL parity with the old hand-committed CSS,
- * not byte-for-byte reproduction.
+ * with dart-sass and adds vendor prefixes (mirroring upstream's autoprefixer step).
+ *
+ * Modernized pipeline (was: grunt svgcss + hand-encoded autoprefixer "last 5 versions"):
+ *   - SVGs are optimized with SVGO (drops Illustrator cruft, shortens paths) and
+ *     embedded with mini-svg-data-uri's minimal escaping — far smaller than the old
+ *     `charset=US-ASCII` + full encodeURIComponent() form, pixel-identical rendering.
+ *   - Vendor prefixing targets come from a single `browserslist` query (package.json
+ *     "browserslist": ["defaults"]) via lightningcss's browserslistToTargets() — no
+ *     more hand-encoded version ints, and IE/dead-browser prefixes are gone.
  *
  * Generated artifacts (gitignored): src/img/_icons.scss, public/css/main.css,
  * public/css/icons.css. The SVG sources in src/img/svg_source/ ARE committed (real
  * source). Layout.astro's <link href="/css/main.css"> is unchanged — we write to those
  * exact paths.
- *
- * Mirrors ../subfolio/config/themes/default/grunt/{svgcss,sass,postcss}.js.
  */
 import * as sass from "sass";
-import { transform } from "lightningcss";
+import { transform, browserslistToTargets } from "lightningcss";
+import browserslist from "browserslist";
+import { optimize as svgo } from "svgo";
+import svgToTinyDataUri from "mini-svg-data-uri";
 import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve, join, basename } from "node:path";
 
@@ -33,33 +40,15 @@ const outDir = join(root, "public/css");
 // Upstream svgcss defaults (grunt/svgcss.js): defaultWidth/Height = 16px.
 const DEFAULT_DIM = 16;
 
-// Vendor-prefix targets mirroring upstream autoprefixer's "last 5 versions"
-// (grunt/postcss.js). Encoded as lightningcss browser-version ints (major << 16).
-// Deliberately old floors so legacy prefixes (-webkit-/-moz-/-ms-) are emitted.
-const targets = {
-  chrome: 49 << 16,
-  firefox: 45 << 16,
-  safari: (9 << 16) | (1 << 8),
-  ie: 11 << 16,
-  edge: 15 << 16,
-};
+// Vendor-prefix targets from the package.json `browserslist` query. One source of
+// truth, also discoverable by any other browserslist-aware tooling.
+const targets = browserslistToTargets(browserslist());
 
 /**
- * Minify an SVG body for data-URI embedding the way SVGO/grunt-svg-css did: drop the
- * XML prolog, comments, and DOCTYPE, then collapse inter-tag whitespace. We keep the
- * markup otherwise intact (no path re-encoding) — it renders identically.
+ * Parse a `width="20px"`/`height="14px"` attribute off the <svg> tag. Run against the
+ * RAW source before SVGO so icon sizing is robust even if optimization ever drops the
+ * dimension attributes (SVGO's preset-default keeps them today, but don't depend on it).
  */
-function cleanSvg(raw) {
-  return raw
-    .replace(/<\?xml[\s\S]*?\?>/gi, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/<!DOCTYPE[\s\S]*?>/gi, "")
-    .replace(/\s*\n\s*/g, " ")
-    .replace(/>\s+</g, "><")
-    .trim();
-}
-
-/** Parse a `width="20px"`/`height="14px"` attribute off the <svg> tag. */
 function dimOf(svg, attr) {
   const m = svg.match(new RegExp(`<svg[^>]*\\b${attr}\\s*=\\s*"([0-9.]+)`, "i"));
   return m ? Math.round(parseFloat(m[1])) : DEFAULT_DIM;
@@ -74,12 +63,17 @@ function generateIconsPartial() {
   const entries = files.map((file) => {
     const name = basename(file, ".svg");
     const raw = readFileSync(join(svgSourceDir, file), "utf8");
-    const cleaned = cleanSvg(raw);
-    const width = dimOf(cleaned, "width");
-    const height = dimOf(cleaned, "height");
-    // Match the upstream data-URI shape: charset=US-ASCII + URL-encoded markup.
-    const datauri = `data:image/svg+xml;charset=US-ASCII,${encodeURIComponent(cleaned)}`;
-    return `  ${name}: ( datauri:'${datauri}', width:${width}px, height:${height}px ),`;
+    // Dimensions come from the raw markup, before SVGO touches the <svg> tag.
+    const width = dimOf(raw, "width");
+    const height = dimOf(raw, "height");
+    // SVGO strips the XML prolog, DOCTYPE, generator comments, Illustrator ids, and
+    // collapses path precision. mini-svg-data-uri then emits the minimally-escaped
+    // `data:image/svg+xml,...` form (" → ', only reserved chars percent-encoded).
+    const { data: optimized } = svgo(raw, { multipass: true, plugins: ["preset-default"] });
+    // mini-svg-data-uri uses single quotes for SVG attrs (smaller than %22), so the
+    // Sass string MUST be double-quoted to avoid a quote collision.
+    const datauri = svgToTinyDataUri(optimized);
+    return `  ${name}: ( datauri:"${datauri}", width:${width}px, height:${height}px ),`;
   });
 
   const out =

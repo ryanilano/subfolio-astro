@@ -30,6 +30,8 @@ const embedAttrs: Record<string, unknown> = {
 };
 ---
 
-<embed {...embedAttrs} />
+<div role="img" aria-label={`Audio: ${f.displayName}`}>
+  <embed {...embedAttrs} />
+</div>
 
 {defaultOptions.display_info && <HideableDownloadBox file={f} />}

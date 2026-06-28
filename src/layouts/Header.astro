@@ -90,39 +90,39 @@ const dropdownHtml = [
   <div class="header__breadcrumb" data-behavior="toggle_dropdown">
     {
       displayBreadcrumb && (
-        <div class="breadcrumb">
+        <nav aria-label="Breadcrumb" class="breadcrumb">
           {t("indexof") && <span class="breadcrumb__index">{t("indexof")}&nbsp;&nbsp;</span>}
           <a class="breadcrumb__root" href={site_root}>{site_domain}</a>
           {breadcrumb.map((crumb) => (
             crumb.url !== "" && crumb.name !== ""
               ? <><span class="breadcrumb__slash">&nbsp;/&nbsp;</span><a class="breadcrumb__folder" href={crumb.url}>{crumb.name}</a></>
               : crumb.name !== ""
-                ? <><span class="breadcrumb__slash">&nbsp;/&nbsp;</span><span class="breadcrumb__current" data-trigger><em>{crumb.name}</em> <i class="icon icon__dropdown_arrow"></i></span></>
+                ? <><span class="breadcrumb__slash">&nbsp;/&nbsp;</span><span class="breadcrumb__current" data-trigger aria-current="page"><em>{crumb.name}</em> <i class="icon icon__dropdown_arrow" aria-hidden="true"></i></span></>
                 : null
           ))}
-        </div>
+        </nav>
       )
     }
 
     {
       displayNavigation && !isRoot && (
-        <div class="header__navigation">
+        <nav aria-label="Pagination" class="header__navigation">
           {prevLink
-            ? <a href={prevLink} class="previous"><i class="icon icon__arrow_left">&larr;</i></a>
-            : <span class="previous faded"><i class="icon icon__arrow_left">&larr;</i></span>
+            ? <a href={prevLink} class="previous" aria-label="Previous folder"><i class="icon icon__arrow_left" aria-hidden="true">&larr;</i></a>
+            : <span class="previous faded" aria-disabled="true"><i class="icon icon__arrow_left" aria-hidden="true">&larr;</i></span>
           }
           {nextLink
-            ? <a href={nextLink} class="next"><i class="icon icon__arrow_right">&rarr;</i></a>
-            : <span class="next faded"><i class="icon icon__arrow_right">&rarr;</i></span>
+            ? <a href={nextLink} class="next" aria-label="Next folder"><i class="icon icon__arrow_right" aria-hidden="true">&rarr;</i></a>
+            : <span class="next faded" aria-disabled="true"><i class="icon icon__arrow_right" aria-hidden="true">&rarr;</i></span>
           }
-        </div>
+        </nav>
       )
     }
   </div>
 
   {
     displayCollapseHeader && displayHeader && (
-      <div class="collapseheader"><a href="#" class="icon icon__collapseheader" data-behavior="collapse_header">{t("collapseheader")}</a></div>
+      <div class="collapseheader"><a href="#" class="icon icon__collapseheader" data-behavior="collapse_header" aria-label={t("collapseheader")}>{t("collapseheader")}</a></div>
     )
   }
 </header>

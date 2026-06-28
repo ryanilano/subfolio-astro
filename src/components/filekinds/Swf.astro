@@ -31,6 +31,8 @@ const embedAttrs: Record<string, unknown> = {
 };
 ---
 
-<embed {...embedAttrs} />
+<div role="img" aria-label={`Flash media: ${f.displayName}`}>
+  <embed {...embedAttrs} />
+</div>
 
 {defaultOptions.display_info && <HideableDownloadBox file={f} />}

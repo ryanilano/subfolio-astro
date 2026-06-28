@@ -54,6 +54,7 @@ const { features, folderPath } = Astro.props;
                     src={imageSrc}
                     width={feature.imageWidth ?? feature.width ?? undefined}
                     height={feature.imageHeight ?? feature.height ?? undefined}
+                    alt={feature.title ?? ""}
                   />
                 )}
                 {hasInfo && (

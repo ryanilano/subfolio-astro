@@ -36,16 +36,16 @@ const shadowStyle = siteConfig.shadow_style_css;
       {
         hasShadow ? (
           <div class="detailIMG__wrapper" style={`box-shadow:${shadowStyle};`}>
-            <img width={f.width} height={f.height} src={f.url} class="detailIMG" data-behavior="toggle_img" />
+            <img width={f.width} height={f.height} src={f.url} class="detailIMG" data-behavior="toggle_img" alt={f.displayName} />
           </div>
         ) : hasBrowser ? (
           <div class="detailIMG__wrapper detailIMG__wrapper--browser" style={`box-shadow:${shadowStyle};`}>
-            <img width={f.width} height={f.height} src={f.url} class="detailIMG" data-behavior="toggle_img" />
+            <img width={f.width} height={f.height} src={f.url} class="detailIMG" data-behavior="toggle_img" alt={f.displayName} />
           </div>
         ) : isRetina ? (
-          <img width={f.width / 2} height={f.height / 2} src={f.url} class="detailIMG" data-behavior="toggle_img" />
+          <img width={f.width / 2} height={f.height / 2} src={f.url} class="detailIMG" data-behavior="toggle_img" alt={f.displayName} />
         ) : (
-          <img width={f.width} height={f.height} src={f.url} class="detailIMG" data-behavior="toggle_img" />
+          <img width={f.width} height={f.height} src={f.url} class="detailIMG" data-behavior="toggle_img" alt={f.displayName} />
         )
       }
       <HideableDownloadBox file={f} />

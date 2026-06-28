@@ -11,7 +11,7 @@
  * <style> block (same approach as template_colors.php), overriding the
  * SCSS defaults.
  */
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { siteConfig, defaultOptions, type Options } from "../lib/site.ts";
 import { loadColorPalette, type ColorPalette } from "../lib/colors.ts";
 import Header from "./Header.astro";
@@ -46,9 +46,12 @@ const {
 // Merge props over defaults
 const opt: Options = { ...defaultOptions, ...opts };
 
-// Resolve color palette from YAML (build time)
-const colorsPath = fileURLToPath(
-  new URL(`../config/colors-${opt.color_palette}.yml`, import.meta.url),
+// Resolve color palette from YAML (build time).
+// Use resolve() relative to process.cwd() because import.meta.url points into
+// Vite's dist/.prerender/ output tree during SSR prerender (Astro 6 SSR mode).
+const colorsPath = resolve(
+  process.cwd(),
+  `src/config/colors-${opt.color_palette}.yml`,
 );
 const palette: ColorPalette = loadColorPalette(colorsPath);
 
@@ -193,7 +196,7 @@ const colorCss = `
 <html lang="en">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#000000" />
 
   {site_meta_description && <meta name="description" content={site_meta_description} />}
@@ -259,6 +262,7 @@ const colorCss = `
 </head>
 
 <body class={`${pageClass}`}>
+  <a class="skip-link" href="#content">Skip to content</a>
   <div id="container">
     <div id="container-inner">
       <Header
@@ -272,9 +276,9 @@ const colorCss = `
         nextLink={nextLink}
       />
       <div id="content-outer">
-        <div id="content">
+        <main id="content">
           <slot />
-        </div>
+        </main>
       </div>
     </div>
     <Footer

@@ -11,23 +11,17 @@ convention (`-t-`/`-m-`/`-b-` embeds, `.link`/`.cut`/`.pop`/`.ftr`/`.slide`/
 **loader** walks that directory at build time and interprets the conventions —
 this is the port of the old PHP engine (`Filebrowser.php` + `Subfolio.php`).
 
-## Status — Phase 1 (content loader, de-risk)
-
-The loader is implemented and validated against the bundled example fixture. It
-fully interprets every naming convention and emits typed folder entries.
-Deferred to later phases: `sharp` thumbnails + image dimensions, RSS HTTP fetch,
-Textile/Markdown rendering, `-access` enforcement, theming, and deploy. Those are
-captured as *parsed intent* in the entries, not yet executed.
-
-## Develop
+## Quickstart
 
 ```sh
-npm install
-npm run dev      # then visit /debug to inspect the parsed folder entries
+npm install      # Node 24 (see .nvmrc)
+npm run dev      # astro dev → browse the rendered listing/detail pages
 npm run build    # astro check (types) + astro build
+npm run preview  # serve the static build locally
+npm run deploy   # build + publish to Cloudflare (Wrangler, Workers static-assets)
 ```
 
-## Content root
+## Content Root
 
 The loader reads `SUBFOLIO_CONTENT_DIR` (see `.env`), defaulting to the bundled
 `content/examples/` fixture so the repo runs standalone. Point it at a live
@@ -37,9 +31,13 @@ Subfolio install's `directory/` to run against real content.
 
 - `src/loaders/` — the content loader (one module per concern; see
   `schema.ts` for the emitted entry shape).
+- `src/pages/[...path].astro` — catch-all that ports the PHP controller,
+  resolving each entry to a folder/file/single/slide view.
+- `src/pages/directory/[...path].ts` — raw-bytes endpoint serving file
+  contents under `/directory/<path>`.
+- `src/components/` — ported `default`-theme listing and per-filekind views.
 - `config/filekinds.yml` — extension → kind → view mapping (from upstream).
 - `content/examples/` — bundled fixture exercising every convention.
-- `src/pages/debug/` — throwaway loader-output inspector (removed before theming).
 - `docs/` — port plan and reference: [ROADMAP](docs/ROADMAP.md), the
   [deployment ADR](docs/ADR-deployment.md), and the stack-agnostic
   [behavior specs](docs/spec/) extracted from the original PHP engine.

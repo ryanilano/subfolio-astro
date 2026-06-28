@@ -14,7 +14,7 @@
     "preview": "astro preview",
     "test": "node --test tests/smoke.*.test.mjs",
     "test:a11y": "npm run build && node --test tests/a11y.contrast.test.mjs tests/a11y.axe.test.mjs",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "npm run build && wrangler pages deploy ./dist --project-name subfolio-astro",
     "astro": "astro"
   },
   "dependencies": {

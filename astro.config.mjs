@@ -2,7 +2,7 @@ import { defineConfig } from "astro/config";
 import sitemap from "@astrojs/sitemap";
 
 export default defineConfig({
-  site: "https://subfolio.pages.dev",
+  site: "https://subfolio-astro.ilano.fyi",
   output: "static",
   compressHTML: true,
   integrations: [sitemap()],

@@ -56,6 +56,10 @@ $inner_padding_mobile:10px;
         border:none;
         overflow:hidden;
         display:block;
+        // width:auto so the (source-sized) width/height attributes don't drive
+        // the table-cell width — let it follow the height-constrained ratio.
+        // Masonry re-pins width:100% below (same specificity, later in source).
+        width:auto;
         max-width:100%;
         height:auto;
         margin-left:auto;

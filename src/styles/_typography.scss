@@ -1,27 +1,17 @@
-$sans-serif: "Suisse", Arial, "Helvetica Neue", Helvetica, Geneva, sans-serif;
+$sans-serif: "Inter", Arial, "Helvetica Neue", Helvetica, Geneva, sans-serif;
 $serif: Georgia, "Times New Roman", Times, serif;
 
+// Inter (https://fonts.google.com/specimen/Inter), self-hosted. v20 ships as a
+// VARIABLE font, so one woff2 covers the whole 100–900 weight axis — a single
+// 48 KB latin-subset file replaces the old 9-file × 5-format Suisse set (~906 KB).
+// `font-weight: 100 900` tells the browser the file spans that range, so the same
+// face answers both normal body text and the 700 used for bold/headings.
 @font-face {
-    font-family: 'Suisse';
-    src: url('../fonts/SuisseIntl-Regular-WebXL.eot');
-    src: url('../fonts/SuisseIntl-Regular-WebXL.eot?#iefix') format('embedded-opentype'),
-         url('../fonts/SuisseIntl-Regular-WebXL.woff2') format('woff2'),
-         url('../fonts/SuisseIntl-Regular-WebXL.woff') format('woff'),
-         url('../fonts/SuisseIntl-Regular-WebXL.ttf') format('truetype'),
-         url('../fonts/SuisseIntl-Regular-WebXL.svg#suisse_intlregular') format('svg');
-    font-weight: normal;
+    font-family: 'Inter';
+    src: url('../fonts/Inter-Variable-latin.woff2') format('woff2');
+    font-weight: 100 900;
     font-style: normal;
-}
-
-@font-face {
-    font-family: "Suisse";
-    src: url('../fonts/SuisseIntl-Medium-WebXL.eot');
-    src: url('../fonts/SuisseIntl-Medium-WebXL.eot?#iefix') format('embedded-opentype'),
-         url('../fonts/SuisseIntl-Medium-WebXL.woff2') format('woff2'),
-         url('../fonts/SuisseIntl-Medium-WebXL.woff') format('woff'),
-         url('../fonts/SuisseIntl-Medium-WebXL.ttf') format('truetype'),
-         url('../fonts/SuisseIntl-Medium-WebXL.svg#suisse_intlmedium') format('svg');
-    font-weight: 700;
+    font-display: swap;
 }
 
 body, h1, h2, h3, h4, h5, h6, h7, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, field, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, .standard_paragraph, .standard_paragraph b, input {

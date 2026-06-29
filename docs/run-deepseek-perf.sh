@@ -37,9 +37,10 @@ CLAUDE_FLAGS="--permission-mode bypassPermissions"
 # are NOT in this list (hot shared file, serialized by hand).
 case "$PHASE" in
   B)
+    # B2 (font diet) already done by hand via the Inter swap; B4 is Opus-owned
+    # (hot Layout.astro). Remaining disjoint fan-out:
     TASKS=(
       "B1:perf/css-minify"
-      "B2:perf/font-diet"
       "B3a:perf/lazy-gallery"
       "B3b:perf/lazy-features"
       "B3c:perf/lazy-img"

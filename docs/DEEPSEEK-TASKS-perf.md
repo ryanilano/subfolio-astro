@@ -33,7 +33,7 @@ Baseline captured Phase A (`dist/perf-budget.json`, this session). `after` fille
 | Inline per page (js + css) | ~1.7 KB js + ~2.9 KB css | |
 | Linked JS (`main.js`, jQuery+A17) | 219.7 KB | |
 | CSS bytes (`main.css` + `icons.css`) | 93.5 KB unminified | |
-| Font bytes shipped (all weights × formats) | 906.5 KB (svg 573 · ttf 168 · woff 76 · eot 59 · woff2 30) | |
+| Font bytes shipped (all weights × formats) | 906.5 KB (svg 573 · ttf 168 · woff 76 · eot 59 · woff2 30) | **47.3 KB** (Inter variable woff2, latin subset) ✅ |
 | Image bytes (served gallery sample) | 85.5 MB png+jpg, no WebP/AVIF | |
 | Lighthouse perf (optional) | (not yet measured) | |
 | Total token spend / cost | (ledger per phase) | |
@@ -74,18 +74,15 @@ SVG/sass logic.
 **Done when:** `node scripts/gen-css.mjs` runs clean and `public/css/main.css` is visibly smaller
 (no newlines between rules). Expect ~20–30% off both CSS files.
 
-### B2 — Font diet · branch `perf/font-diet` · file `src/styles/_typography.scss` (+ delete dead font files)
-In **both** `@font-face` blocks, drop the `eot`, `ttf`, and `svg` `src` entries; keep only
-`woff2` then `woff`. Add `font-display: swap;` to each block.
-**CRITICAL — the Regular weight has NO `.woff2` file** (`public/fonts/` has
-`SuisseIntl-Regular-WebXL.woff/.ttf/.eot/.svg` but no `.woff2`; the current SCSS references a
-woff2 that 404s silently). So for the **Regular** block, keep `woff` only (or both if a woff2 is
-added); for the **Medium** block keep `woff2` + `woff`. Do not invent a file that isn't there.
-Then **delete the now-unused font files** from `public/fonts/`: all `*.eot`, all `*.svg`, all
-`*.ttf` (six files). Leave the woff/woff2 that remain referenced.
-**Done when:** `git status` shows the six dead font files deleted; `_typography.scss` references
-only files that exist on disk; each block has `font-display: swap`. This kills ~573 KB SVG +
-~168 KB TTF + ~59 KB EOT ≈ 800 KB.
+### B2 — Font diet ✅ DONE (Opus, by hand — superseded the original brief)
+
+Done early as part of a typeface swap to **Inter** (Google Fonts, self-hosted). Rather than
+trim the Suisse 5-format set, the whole family was replaced: `src/styles/_typography.scss` now
+declares one Inter `@font-face` pointing at `public/fonts/Inter-Variable-latin.woff2` — Inter v20
+is a **variable font**, so a single 48 KB latin-subset woff2 covers the full 100–900 weight axis
+(`font-weight: 100 900`), answering both body text and the 700 used for bold. All 9 Suisse files
+deleted; `font-display: swap` set. **Result: fonts 906.5 KB → 47.3 KB.** (This also resolved the
+latent missing-Regular-woff2 404 by removing Suisse entirely.)
 
 ### B3a — Lazy gallery images · branch `perf/lazy-gallery` · file `src/components/listing/Gallery.astro`
 Add `loading="lazy"` and `decoding="async"` to the gallery `<img>` tag(s) (around lines 133 and
@@ -105,14 +102,15 @@ the four. Do **not** add `loading="lazy"` here (it would delay the main subject)
 **Done when:** all four `detailIMG` tags carry `decoding="async"` and none has `loading="lazy"`.
 
 ### B4 — Font preload + native-async icons.css · `src/layouts/Layout.astro` · **OPUS, not fanned out**
-In `<head>`: add `<link rel="preload" as="font" type="font/woff2" crossorigin>` for the woff2
-that actually exist (Medium woff2 today; Regular only if B2 adds one — do not preload a missing
-file). Replace the `A17.loadCSS("/css/icons.css")` JS-polyfill `<script>` with a native
+
+Font preload **already done** with the Inter swap (`<link rel="preload" as="font" type="font/woff2"
+crossorigin href="/fonts/Inter-Variable-latin.woff2">` is in `<head>`). **Remaining:** replace the
+`A17.loadCSS("/css/icons.css")` JS-polyfill `<script>` with a native
 `<link rel="stylesheet" href="/css/icons.css?v=2" media="print" onload="this.media='all'">` +
 `<noscript>` fallback. Keep the A17 bootstrap script (browserSpec/touch detection) — only the
 `loadCSS` icons call is replaced.
-**Done when:** no `A17.loadCSS` call remains; icons.css loads via native async; woff2 preload
-present and points only at existing files; render-review confirms icons still render.
+**Done when:** no `A17.loadCSS` call remains; icons.css loads via native async; render-review
+confirms icons still render.
 
 **Phase B done when:** `npm run perf` shows CSS + font bytes dropped vs. Phase-A baseline; pages
 render identically (render-review Gallery, a detail page, the font swap); `npm run test` +

@@ -2,8 +2,6 @@
 
 AstroJS port of [Subfolio](https://github.com/area17/subfolio) — a no-database file browser that turns a folder on disk into a themeable web gallery. The project has been reimagined from its original Kohana 2.x / PHP 5.6 stack to an **Astro static site** (Cloudflare Pages target, hybrid-ready).
 
-Content is authored by dropping files into a content directory and naming them by convention (`-t-`/`-m-`/`-b-` embeds, `.link`/`.cut`/`.pop`/`.ftr`/`.slide`/`.site`/`.oplx`/`.rss` enhancers, `-hidden`, `-access`). A custom Astro content **loader** walks that directory at build time and interprets the conventions — this is the port of the old PHP engine (`Filebrowser.php` + `Subfolio.php`).
-
 ## Quickstart
 
 ```sh
@@ -13,6 +11,8 @@ npm run build    # astro check (types) + astro build
 npm run preview  # serve the static build locally
 npm run deploy   # build + publish to Cloudflare (Wrangler, Workers static-assets)
 ```
+
+Content is authored by dropping files into a content directory and naming them by convention (`-t-`/`-m-`/`-b-` embeds, `.link`/`.cut`/`.pop`/`.ftr`/`.slide`/`.site`/`.oplx`/`.rss` enhancers, `-hidden`, `-access`). A custom Astro content **loader** walks that directory at build time and interprets the conventions — this is the port of the old PHP engine (`Filebrowser.php` + `Subfolio.php`).
 
 ## Content Root
 

@@ -21,6 +21,8 @@ node_modules/
 .env.production
 # logs
 npm-debug.log*
+# local-only scratch + Claude Code session logs (untracked, never pushed)
+.local/
 # macOS
 .DS_Store
 # personal Claude Code config + hooks (not shared; fan-out workers don't push).

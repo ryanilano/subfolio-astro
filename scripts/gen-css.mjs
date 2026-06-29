@@ -97,6 +97,7 @@ function compile(entry) {
     filename: `${name}.css`,
     code: Buffer.from(result.css),
     targets,
+    minify: true,
   });
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, `${name}.css`), code);

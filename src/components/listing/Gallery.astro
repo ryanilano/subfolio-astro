@@ -134,6 +134,8 @@ const isMasonry = listingMode === "masonry";
                     width={image.width}
                     height={image.height}
                     src={image.url}
+                    loading="lazy"
+                    decoding="async"
                     style={imgStyle(image, isMasonry)}
                   alt=""
                   />
@@ -157,6 +159,8 @@ const isMasonry = listingMode === "masonry";
                     width={image.width}
                     height={image.height}
                     src={image.url}
+                    loading="lazy"
+                    decoding="async"
                     style={imgStyle(image, isMasonry)}
                   alt=""
                   />

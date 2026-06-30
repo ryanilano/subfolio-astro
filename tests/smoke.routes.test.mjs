@@ -48,7 +48,9 @@ test("gallery <img> keeps the aspect-ratio guard (Findings #1 regression)", () =
   // The gallery img rule must keep width:auto, or source-sized width attributes
   // squish the thumbnails. See docs/TESTING.md Findings #1.
   const css = distFile("css/main.css");
-  const rule = css.match(/\.gallery li a img \{[^}]*\}/);
+  // \s* before the brace: B1 (Phase B) minifies main.css, so the rule is
+  // `.gallery li a img{...}` with no space. Match both minified and unminified.
+  const rule = css.match(/\.gallery li a img\s*\{[^}]*\}/);
   assert.ok(rule, "missing .gallery li a img rule in main.css");
   assert.match(rule[0], /width:\s*auto/, "gallery img lost width:auto (Findings #1 regression)");
 });

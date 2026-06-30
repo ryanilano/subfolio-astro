@@ -7,6 +7,8 @@ description: Capture durable session state for a clean pass-off to a new context
 
 Make passing work between context windows cheap and lossless. A new window starts cold — it knows only durable memory + git. Two modes: **capture** (session end) and **resume** (session start). Pick from the user's phrasing: "prepare/wrap up/pass off" → Capture; "resume/pick up/continue" → Resume.
 
+**Token efficiency is mandatory for everything this skill writes** (memory files + the handoff report). The payload is re-read cold every future session, so every wasted token is paid forever. Write for signal density: facts, `file:line` targets, PR#/commit SHAs, terse bullets — no narrative, no blow-by-blow, no restating git/code/CLAUDE.md. **Compress completed/shipped work to outcome + durable gotchas only** (the execution story is in git). Keep what's non-obvious and not derivable from the repo; cut the rest. See [[token-efficient-memory-writing]].
+
 **Find the memory dir first (either mode), portable — don't hardcode `/Users/...`:**
 `MEM="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/$(pwd | sed 's#/#-#g')/memory"`. Confirm with `ls "$MEM"` (holds `MEMORY.md` + per-fact `*.md`). The session's system context also names this dir. Create it if absent.
 

@@ -52,19 +52,19 @@ const isGrid = opt.listing_mode === "grid";
         {opt.display_file_listing_header && !isGrid && (
           <div class="list__row list__header">
             {opt.display_name && (
-              <span class="list__cell list__cell--filename"><a href="?sort=filename">{t("filename")}</a></span>
+              <span class="list__cell list__cell--filename"><span>{t("filename")}</span></span>
             )}
             {opt.display_size && (
-              <span class="list__cell list__cell--size"><a href="?sort=size">{t("size")}</a></span>
+              <span class="list__cell list__cell--size"><span>{t("size")}</span></span>
             )}
             {opt.display_date && (
               <>
                 <span class="list__cell list__cell--updated"></span>
-                <span class="list__cell list__cell--date"><a href="?sort=date">{t("date")}</a></span>
+                <span class="list__cell list__cell--date"><span>{t("date")}</span></span>
               </>
             )}
             {opt.display_kind && (
-              <span class="list__cell list__cell--kind"><a href="?sort=kind">{t("kind")}</a></span>
+              <span class="list__cell list__cell--kind"><span>{t("kind")}</span></span>
             )}
             {opt.display_comment && (
               <span class="list__cell list__cell--comment">{t("comment")}</span>
@@ -88,9 +88,9 @@ const isGrid = opt.listing_mode === "grid";
                   {opt.display_icons ? (
                     <span class="list__cell--filenameicon">
                       {item.restricted ? (
-                        <i class={`icon icon__${iconType}_${item.haveAccess ? "shared" : "protected"}`}></i>
+                        <i class={`icon icon__${iconType}_${item.haveAccess ? "shared" : "protected"}`} aria-hidden="true"></i>
                       ) : (
-                        <i class={`icon icon__${iconType}`}></i>
+                        <i class={`icon icon__${iconType}`} aria-hidden="true"></i>
                       )}
                     </span>
                   ) : (

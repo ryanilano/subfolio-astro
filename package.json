@@ -12,7 +12,8 @@
     "start": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && node scripts/gen-oplx.mjs && astro dev",
     "build": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && node scripts/gen-oplx.mjs && astro check && astro build",
     "preview": "astro preview",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --test tests/smoke.*.test.mjs",
+    "test:a11y": "npm run build && node --test tests/a11y.contrast.test.mjs tests/a11y.axe.test.mjs",
     "deploy": "npm run build && wrangler deploy",
     "astro": "astro"
   },
@@ -25,11 +26,19 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1",
     "@types/node": "^26.0.1",
     "archiver": "^8.0.0",
+    "browserslist": "^4.28.4",
     "lightningcss": "^1.32.0",
+    "mini-svg-data-uri": "^1.4.4",
     "sass": "^1.97.3",
+    "svgo": "^4.0.1",
     "typescript": "^5.9.3",
     "wrangler": "^4.87.0"
-  }
+  },
+  "browserslist": [
+    "defaults"
+  ]
 }

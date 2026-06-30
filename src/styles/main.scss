@@ -123,7 +123,7 @@ body {
 -------------------------------------------------------------- */
 
 .error { color: #FF0000; } /* << flash_color */
-.faded { color: #BBB; } /* << text_dimmed_color */
+.faded { color: $color-text-secondary; } /* << text_dimmed_color */
 b, strong { color: $color-text; }
 
 /* @end */
@@ -132,7 +132,7 @@ b, strong { color: $color-text; }
 /* --------------------------------------------------------------
    LINKS
 -------------------------------------------------------------- */
-a, a:link,a:visited { color: $color-text; text-decoration: none; outline: none; } /* << link_color */
+a, a:link,a:visited { color: $color-text; text-decoration: none; } /* << link_color */
 a:hover, a:focus { color: inherit; }
 
 /* LINKS FOR GALLERY, FEATURES MODULES */
@@ -279,5 +279,41 @@ MODULE SPACING
   }
   .show-inline-mobile {
     display:inline;
+  }
+}
+
+
+/* ── Accessibility ──────────────────────────────────────────────────── */
+
+/* Skip-to-content link: visually hidden until focused */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 1000;
+  padding: 0.5rem 1rem;
+  background: $color-text;
+  color: #fff;
+  text-decoration: none;
+  font-weight: bold;
+}
+.skip-link:focus {
+  top: 0;
+}
+
+/* Visible focus ring for keyboard navigation */
+:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

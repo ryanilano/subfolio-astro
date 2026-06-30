@@ -95,14 +95,21 @@ async function genOne(relPath) {
   const w = meta.width ?? 0;
   if (h <= 0 || w <= 0 || h <= THUMB_HEIGHT) return "skip";
 
-  // Resize: masonry constrains width, list/grid constrains height (SPEC §3.6).
+  // Resize: masonry constrains width, list/grid constrains height.
+  // Targets doubled (480/640) for retina crispness at the 240px display size.
   const resizeOpts =
     LISTING_MODE === "masonry"
-      ? { width: THUMB_WIDTH, withoutEnlargement: true }
-      : { height: THUMB_HEIGHT, withoutEnlargement: true };
+      ? { width: THUMB_WIDTH * 2, withoutEnlargement: true }
+      : { height: THUMB_HEIGHT * 2, withoutEnlargement: true };
 
   mkdirSync(dirname(absThumb), { recursive: true, mode: 0o755 });
-  await sharp(absSource).resize(resizeOpts).toFile(absThumb);
+
+  // Base thumbnail (original format) + WebP + AVIF siblings (same resize pipeline).
+  await Promise.all([
+    sharp(absSource).resize(resizeOpts).toFile(absThumb),
+    sharp(absSource).resize(resizeOpts).webp({ quality: 80 }).toFile(absThumb + ".webp"),
+    sharp(absSource).resize(resizeOpts).avif({ quality: 55 }).toFile(absThumb + ".avif"),
+  ]);
   return "created";
 }
 

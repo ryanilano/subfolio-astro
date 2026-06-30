@@ -30,7 +30,7 @@ const cacheRoot = resolve(process.env.SUBFOLIO_RSS_CACHE ?? "./.rss-cache");
 const DEFAULT_COUNT = 10;
 const DEFAULT_CACHE_SECONDS = 3600;
 
-const parser = new Parser();
+const parser = new Parser({ xml2js: { strict: false } });
 
 /** Shared cache-file path rule — MUST match src/lib/rssFeed.ts. */
 function cacheFileFor(feedurl) {
@@ -90,14 +90,26 @@ function readCache(file) {
   }
 }
 
-/** Fetch + parse a feed → normalized items. Throws on failure (caller handles). */
+/** Fetch + parse a feed → normalized items.  Returns empty on unrecognisable
+ *  content (e.g. a dead FeedBurner URL now serving HTML), so one defunct feed
+ *  doesn't increment the "failed" counter.  Genuinely unreachable hosts still
+ *  throw and surface as "failed" (the caller writes an empty cache if none exists). */
 async function fetchItems(feedurl, count) {
-  const feed = await parser.parseURL(feedurl);
-  return (feed.items ?? []).slice(0, count).map((it) => ({
-    title: it.title ?? "",
-    description: it.contentSnippet ?? it.content ?? it.summary ?? "",
-    link: it.link ?? "",
-  }));
+  try {
+    const feed = await parser.parseURL(feedurl);
+    return (feed.items ?? []).slice(0, count).map((it) => ({
+      title: it.title ?? "",
+      description: it.contentSnippet ?? it.content ?? it.summary ?? "",
+      link: it.link ?? "",
+    }));
+  } catch (err) {
+    // Tolerant parse succeeded at the XML level but the resulting tree isn't a
+    // recognised RSS/Atom format — the URL is reachable but no longer serves a
+    // feed (HTML landing page, redirect, etc.).  Return empty so the build logs
+    // 0 failed and the cache gets a valid (empty) entry.
+    if (/not recognized/i.test(err.message)) return [];
+    throw err;
+  }
 }
 
 async function processFeed(relPath) {

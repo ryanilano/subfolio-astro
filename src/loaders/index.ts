@@ -1,6 +1,7 @@
 import type { Loader } from "astro/loaders";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
+import sharp from "sharp";
 import {
   isHidden,
   positionOf,
@@ -49,6 +50,8 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
       const kinds = loadFileKinds(opts.filekindsPath);
       const ctx = { contentRoot, kinds, renderer: opts.renderer };
       let count = 0;
+      // Captured for the post-walk async image-dimension enrichment pass.
+      const entries: { id: string; data: ReturnType<typeof folderEntrySchema.parse> }[] = [];
 
       const walk = (relDir: string) => {
         const absDir = join(contentRoot, relDir);
@@ -147,13 +150,33 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
         });
 
         const id = relDir || ".";
-        store.set({ id, data: entry });
+        entries.push({ id, data: entry });
         count++;
 
         for (const sub of subdirsToWalk) walk(sub);
       };
 
       walk("");
+
+      // Async enrichment: read each feature image's real pixel dimensions via
+      // sharp, mirroring the PHP engine's getimagesize() on the actual file.
+      // Image decoding is deferred out of the synchronous walk above. Lenient —
+      // an unreadable image just leaves img dims unset (view falls back to box).
+      for (const { id, data } of entries) {
+        for (const feature of data.features) {
+          if (!feature.image) continue;
+          const abs = join(contentRoot, data.path === "." ? "" : data.path, feature.image);
+          try {
+            const meta = await sharp(abs).metadata();
+            if (meta.width) feature.imageWidth = meta.width;
+            if (meta.height) feature.imageHeight = meta.height;
+          } catch {
+            /* unreadable → leave unset, view falls back to box dims */
+          }
+        }
+        store.set({ id, data });
+      }
+
       logger.info(`subfolio-loader: indexed ${count} folder(s) from ${contentRoot}`);
     },
   };

@@ -93,6 +93,9 @@ const feature = z.object({
   image: z.string().optional(),
   width: z.number().optional(),
   height: z.number().optional(),
+  /** Image's own pixel dimensions, read via sharp (mirrors PHP getimagesize). */
+  imageWidth: z.number().optional(),
+  imageHeight: z.number().optional(),
   description: z.string().optional(),
   target: z.string().optional(),
 });

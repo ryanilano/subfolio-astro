@@ -1,0 +1,63 @@
+---
+// THROWAWAY Phase-1 de-risk page: dumps each resolved folder entry so we can
+// eyeball that directory/examples/ parses correctly against SPEC-conventions.
+// Removed before the Phase-2 theme cutover.
+import { getCollection, getEntry } from "astro:content";
+
+export async function getStaticPaths() {
+  const all = await getCollection("folders");
+  return all.map((entry) => ({
+    // "." is the root entry → empty path segment.
+    params: { path: entry.id === "." ? undefined : entry.id },
+    props: { id: entry.id },
+  }));
+}
+
+const { id } = Astro.props as { id: string };
+const entry = await getEntry("folders", id);
+const data = entry?.data;
+
+const all = await getCollection("folders");
+const allIds = all.map((e) => e.id).sort();
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>subfolio loader debug — {id}</title>
+    <style>
+      body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 2rem; max-width: 70rem; }
+      nav { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #ccc; }
+      nav a { display: inline-block; margin: 0 .6rem .3rem 0; }
+      pre { background: #f5f5f5; padding: 1rem; overflow: auto; border-radius: 6px; }
+      h1 { font-size: 1.1rem; }
+      .summary { background: #eef; padding: .75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
+      .summary span { margin-right: 1.25rem; }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <strong>folders:</strong>
+      {allIds.map((fid) => (
+        <a href={fid === "." ? "/debug" : `/debug/${fid}`}>{fid}</a>
+      ))}
+    </nav>
+
+    <h1>Folder entry: <code>{id}</code></h1>
+
+    {data && (
+      <div class="summary">
+        <span>folders: {data.folders.length}</span>
+        <span>files: {data.files.length}</span>
+        <span>embeds: {data.embeds.top.length}/{data.embeds.middle.length}/{data.embeds.bottom.length} (t/m/b)</span>
+        <span>features: {data.features.length}</span>
+        <span>related: {data.related.length}</span>
+        <span>excluded: {data.excluded.length}</span>
+        <span>access: {data.access ? "yes" : "—"}</span>
+      </div>
+    )}
+
+    <pre>{JSON.stringify(data, null, 2)}</pre>
+  </body>
+</html>

@@ -1,0 +1,66 @@
+/*
+ * ryanilano theme — thin override layer on top of main.css (the default AREA17
+ * theme). Compiled by scripts/gen-css.mjs → public/css/theme-ryanilano.css and
+ * <link>ed AFTER main.css + the inline color palette (Layout.astro), so these rules
+ * win on equal specificity. Activated only when settings.theme = ryanilano.
+ *
+ * Ported from the 2014 config-legacy/themes/ryanilano/css/main.css. That file was a
+ * fork of the whole default sheet (plus an unrelated appended responsive framework);
+ * this is just the substantive identity delta, with selectors re-pointed to the
+ * port's real DOM (the legacy #gallery / .grid / .list ids+classes were renamed to
+ * .gallery / .gallery--grid / .gallery_thumbnail).
+ *
+ * Intentionally dropped from the legacy delta:
+ *   - body { font-size: 10px } — the port sets font-size:15px directly on every text
+ *     element (_typography.scss), not via a cascading root, so a base override is inert.
+ *   - the legacy "removed" hunks (hr, .columns4, ul.group, iOS tap-highlight) — those
+ *     trimmed default cruft from a monolithic fork; in an additive layer they're moot.
+ */
+
+/* Light-grey page, the ryanilano backdrop (default is white). */
+body {
+  background-color: #ececec;
+}
+
+/* Helvetica-led type for content text. The port otherwise sets Inter directly on
+   each element, so we must name the text selectors, not just #content, to reach them. */
+#content,
+.standard_paragraph,
+.standard_paragraph b,
+.list__cell--filename {
+  font-family: "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
+}
+
+/* Fixed max width (default is fluid). #container survives from the legacy markup. */
+#container {
+  max-width: 1024px;
+}
+.gallery {
+  max-width: 70em;
+}
+
+/* Logo breathing room. */
+#logo {
+  padding-left: 1.6em;
+}
+
+/* Dark gallery tiles — the signature ryanilano look. Legacy targeted #gallery/.grid/
+   .list; in the port the grid is .gallery--grid and each thumbnail box is
+   .gallery_thumbnail. Light tile frame, dark thumbnail well, full-black on hover.
+
+   Specificity matters here: base _gallery.scss sets `div.gallery_thumbnail {
+   background-color: inherit }` as `.gallery li a div.gallery_thumbnail` (0,2,3). The
+   thumbnail rule below must MATCH that depth (`.gallery--grid li a div.gallery_thumbnail`,
+   also 0,2,3) so it beats the inherit by source order — a bare `.gallery--grid
+   .gallery_thumbnail` (0,2,0) loses, leaving the well light. The anchor/hover rules
+   already out-rank base. This layer also loads after the inline colorCss palette, so
+   it wins the gallery there too (see Layout.astro). */
+.gallery--grid li a {
+  background-color: #e4e4e4;
+}
+.gallery--grid li a div.gallery_thumbnail {
+  background-color: #333;
+}
+.gallery--grid li a:hover {
+  background-color: #000;
+}

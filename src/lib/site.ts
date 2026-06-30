@@ -159,6 +159,13 @@ const theme = asString(settings.theme) || THEME_DEFAULT;
 const options = loadThemeOptions(configDir, theme);
 
 /**
+ * Resolved active theme name (settings.theme, default "default"). Layout.astro uses
+ * it to <link> the matching compiled override sheet (public/css/theme-<name>.css),
+ * when one exists. The default theme's look is main.css, so it ships no extra sheet.
+ */
+export const activeTheme = theme;
+
+/**
  * Site-wide config: defaults ← settings.yml (renames below) ← theme options.yml
  * (branding/palette). Legacy `site_name` → `site_title`; `text_rendering` and
  * `thumbnail_max_filesize` are intentionally NOT read here (they have dedicated

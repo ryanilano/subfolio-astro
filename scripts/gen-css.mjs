@@ -28,13 +28,14 @@ import { transform, browserslistToTargets } from "lightningcss";
 import browserslist from "browserslist";
 import { optimize as svgo } from "svgo";
 import svgToTinyDataUri from "mini-svg-data-uri";
-import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve, join, basename } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const svgSourceDir = join(root, "src/img/svg_source");
 const iconsPartial = join(root, "src/img/_icons.scss");
 const stylesDir = join(root, "src/styles");
+const themesDir = join(stylesDir, "themes");
 const outDir = join(root, "public/css");
 
 // Upstream svgcss defaults (grunt/svgcss.js): defaultWidth/Height = 16px.
@@ -85,32 +86,58 @@ function generateIconsPartial() {
   return files.length;
 }
 
-/** Compile one SCSS entrypoint → prefixed CSS at public/css/<name>.css. */
-function compile(entry) {
+/**
+ * Compile one SCSS entrypoint → prefixed CSS at public/css/<outName>.css.
+ * outName defaults to the entry's basename; pass it to rename the output (e.g.
+ * theme entrypoints land at theme-<name>.css, not <name>.css).
+ */
+function compile(entry, outName = basename(entry, ".scss")) {
   const result = sass.compile(join(stylesDir, entry), {
     loadPaths: [stylesDir],
     silenceDeprecations: ["import", "global-builtin", "color-functions", "slash-div"],
     quietDeps: true,
   });
-  const name = basename(entry, ".scss");
   const { code } = transform({
-    filename: `${name}.css`,
+    filename: `${outName}.css`,
     code: Buffer.from(result.css),
     targets,
     minify: true,
   });
   mkdirSync(outDir, { recursive: true });
-  writeFileSync(join(outDir, `${name}.css`), code);
+  writeFileSync(join(outDir, `${outName}.css`), code);
   return code.length;
+}
+
+/**
+ * Compile every src/styles/themes/*.scss → public/css/theme-<name>.css. These are
+ * thin override layers <link>ed AFTER main.css for the active theme (Layout.astro).
+ * Generic: dropping a new themes/<name>.scss is enough, no script change. `_`-prefixed
+ * partials and a missing dir are skipped.
+ */
+function compileThemes() {
+  if (!existsSync(themesDir)) return [];
+  return readdirSync(themesDir)
+    .filter((f) => f.endsWith(".scss") && !f.startsWith("_"))
+    .sort()
+    .map((file) => {
+      const name = basename(file, ".scss");
+      const bytes = compile(join("themes", file), `theme-${name}`);
+      return { name, bytes };
+    });
 }
 
 function main() {
   const iconCount = generateIconsPartial();
   const mainBytes = compile("main.scss");
   const iconsBytes = compile("icons.scss");
+  const themes = compileThemes();
+  const themeSummary = themes
+    .map((t) => `theme-${t.name}.css ${(t.bytes / 1024).toFixed(1)}KB`)
+    .join(", ");
   console.log(
     `[gen-css] ${iconCount} icon(s) → _icons.scss; ` +
-      `main.css ${(mainBytes / 1024).toFixed(1)}KB, icons.css ${(iconsBytes / 1024).toFixed(1)}KB`,
+      `main.css ${(mainBytes / 1024).toFixed(1)}KB, icons.css ${(iconsBytes / 1024).toFixed(1)}KB` +
+      (themeSummary ? `; ${themeSummary}` : ""),
   );
 }
 

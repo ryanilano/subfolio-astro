@@ -12,6 +12,7 @@ dist/
 src/img/_icons.scss
 public/css/main.css
 public/css/icons.css
+public/css/theme-*.css
 # generated types
 .astro/
 # wrangler local state (cloudflare deploy)

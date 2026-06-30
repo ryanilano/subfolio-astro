@@ -12,6 +12,7 @@
  * SCSS defaults.
  */
 import { resolve } from "node:path";
+import { ClientRouter } from "astro:transitions";
 import { siteConfig, defaultOptions, type Options } from "../lib/site.ts";
 import { loadColorPalette, type ColorPalette } from "../lib/colors.ts";
 import Header from "./Header.astro";
@@ -29,6 +30,12 @@ export interface Props {
   /** Prev/next folder links for navigation. */
   prevLink?: string | null;
   nextLink?: string | null;
+  /** Open Graph / meta description for this page. Falls back to the site default. */
+  description?: string;
+  /** Open Graph image (site-root-relative or absolute). Resolved to absolute below. */
+  ogImage?: string;
+  /** Open Graph type: "website" for listings, "article" for file detail views. */
+  ogType?: "website" | "article";
   /** Display options override (merge with defaults). */
   options?: Partial<Options>;
 }
@@ -40,6 +47,9 @@ const {
   isRoot = false,
   prevLink = null,
   nextLink = null,
+  description,
+  ogImage,
+  ogType = "website",
   options: opts = {},
 } = Astro.props;
 
@@ -56,10 +66,24 @@ const colorsPath = resolve(
 const palette: ColorPalette = loadColorPalette(colorsPath);
 
 // Site metadata
-const { site_title, site_meta_description, site_favicon_url, google_analytics_code } = siteConfig;
+const {
+  site_title,
+  site_meta_description,
+  site_favicon_url,
+  google_analytics_code,
+  enable_view_transitions,
+} = siteConfig;
 
 // Full page title: "Page Title — Site Title" or just "Site Title"
 const fullTitle = title ? `${title} — ${site_title}` : site_title;
+
+// --- Open Graph / Twitter Card -------------------------------------------
+// Absolute canonical URL for this page (Astro.site is set in astro.config).
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
+// Description: per-page override → site default → undefined (tag omitted).
+const ogDescription = description || site_meta_description || undefined;
+// og:image must be absolute. Callers pass a root-relative thumbnail URL.
+const ogImageUrl = ogImage ? new URL(ogImage, Astro.site).href : undefined;
 
 // Color palette CSS (ported from template_colors.php). Built as a string in
 // frontmatter because Astro <style> blocks are parsed as static CSS and do NOT
@@ -199,9 +223,29 @@ const colorCss = `
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#000000" />
 
-  {site_meta_description && <meta name="description" content={site_meta_description} />}
+  {/* Opt-in SPA navigation (Astro View Transitions). Inert unless the flag is
+      set — see siteConfig.enable_view_transitions for the A17-reinit caveat. */}
+  {enable_view_transitions && <ClientRouter />}
+
+  {ogDescription && <meta name="description" content={ogDescription} />}
 
   <title>{fullTitle}</title>
+
+  <link rel="canonical" href={canonicalUrl} />
+
+  {/* Open Graph (Facebook, LinkedIn, Slack, …) */}
+  <meta property="og:type" content={ogType} />
+  <meta property="og:site_name" content={site_title} />
+  <meta property="og:title" content={fullTitle} />
+  <meta property="og:url" content={canonicalUrl} />
+  {ogDescription && <meta property="og:description" content={ogDescription} />}
+  {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+
+  {/* Twitter Card */}
+  <meta name="twitter:card" content={ogImageUrl ? "summary_large_image" : "summary"} />
+  <meta name="twitter:title" content={fullTitle} />
+  {ogDescription && <meta name="twitter:description" content={ogDescription} />}
+  {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
 
   {site_favicon_url && (
     <>

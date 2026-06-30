@@ -71,3 +71,28 @@ side-by-side against identical content for diffing. No data migration.
 - [x] Phase 3 — Build pipeline & deploy (Cloudflare Pages + GitHub Actions CI; live)
 - [ ] Phase 4 — Auth Worker (deferred / optional)
 - [x] Phase 5 — Enhancer polish (Markdown + `.pop` + `.slide` + `.oplx` zip)
+
+## Milestone 6 — Performance & build modernization (complete)
+
+Post-port perf pass; port-fidelity constraint cut loose, **measure-don't-block** budget posture
+(warn-only, never fail CI). Full task log + per-phase results live in
+[DEEPSEEK-TASKS-perf.md](DEEPSEEK-TASKS-perf.md); approved plan in
+[../plans/zippy-coalescing-rainbow.md](../plans/zippy-coalescing-rainbow.md).
+
+- [x] Phase A — Measurement gate (perf-budget harness, ledger, baseline)
+- [x] Phase B — Asset quick-wins (CSS minify, Inter font diet, lazy imgs, icons media-swap)
+- [x] Phase C — Modern image formats (WebP/AVIF retina thumbnails; originals untouched)
+- [x] Phase D — jQuery split + defer (non-blocking parse; `?v=` cache-bust)
+- [x] Phase E — Head & SEO (Open Graph + Twitter Card + canonical; View Transitions flag, off)
+
+| Metric | Before | After |
+| --- | --- | --- |
+| Font bytes shipped | 906.5 KB (5 formats × weights) | **47.3 KB** (Inter variable woff2) |
+| CSS bytes (main + icons) | 93.5 KB unminified | **84.4 KB** minified, icons non-blocking |
+| Linked JS (jQuery + A17) | 219.7 KB render-blocking | 219.7 KB **deferred** |
+| Gallery thumbnails | PNG/JPEG only | **WebP/AVIF** retina (−64…−93%/preview) |
+| Head/SEO | title only | **OG + Twitter + canonical**, absolute URLs |
+| Largest per-page HTML | 13.4 KB | 13.5 KB (within 20 KB budget) |
+
+Deliberately left out: jQuery vanilla rewrite, live View Transitions (flag wired, off),
+Lighthouse scoring (measure-don't-block — no perf gate in CI).

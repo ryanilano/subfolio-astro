@@ -27,17 +27,18 @@ executes disjoint per-file tasks in parallel worktrees, Opus render-reviews the 
 
 Baseline captured Phase A (`dist/perf-budget.json`, this session). `after` filled at milestone close.
 
-| Metric | Before (Phase A baseline) | After |
+| Metric | Before (Phase A baseline) | After (milestone close) |
 |---|---|---|
-| Per-page HTML weight (avg / largest) | 8.2 KB avg · 13.4 KB largest | |
-| Inline per page (js + css) | ~1.7 KB js + ~2.9 KB css | |
-| Linked JS (`main.js`, jQuery+A17) | 219.7 KB | |
-| CSS bytes (`main.css` + `icons.css`) | 93.5 KB unminified | |
+| Per-page HTML weight (avg / largest) | 8.2 KB avg · 13.4 KB largest | ~8.7 KB avg · **13.5 KB** largest (+~0.5 KB/page for OG/canonical meta; still 13.5/20 budget) |
+| Inline per page (js + css) | ~1.7 KB js + ~2.9 KB css | ~1.7 KB js + ~2.9 KB css (color palette only; jQuery never inlined) |
+| Linked JS (`main.js`, jQuery+A17) | 219.7 KB | **219.7 KB, now `defer`red** (non-blocking parse; `?v=2` cache-bust) ✅ |
+| CSS bytes (`main.css` + `icons.css`) | 93.5 KB unminified | **84.4 KB minified** (icons.css media-swapped, non-render-blocking) ✅ |
 | Font bytes shipped (all weights × formats) | 906.5 KB (svg 573 · ttf 168 · woff 76 · eot 59 · woff2 30) | **47.3 KB** (Inter variable woff2, latin subset) ✅ |
 | Image bytes (served gallery sample) | 85.5 MB png+jpg, no WebP/AVIF | **Thumbnails now WebP/AVIF** (−64…−93% per preview, e.g. 120→8 KB AVIF); originals untouched ✅ |
-| Lighthouse perf (optional) | (not yet measured) | |
-| Total token spend / cost | (ledger per phase) | |
-| DeepSeek vs Anthropic task split | (ledger per phase) | |
+| Head/SEO | none (title + empty description) | **OG + Twitter Card + canonical**, absolute URLs, gallery 1st thumb as og:image ✅ |
+| Lighthouse perf (optional) | (not measured — out of scope) | (not measured — measure-don't-block posture) |
+| Total token spend / cost | (ledger per phase) | **$0.083 actual** (Phase C DeepSeek); B mislabeled $2.33; D+E $0 (in-session Opus) |
+| DeepSeek vs Anthropic task split | (ledger per phase) | DeepSeek **2 tasks** (Phase C, proxy-verified) · Anthropic **4 tasks** (Phase B, proxy didn't flip) |
 
 > Note: the Phase-A harness corrected two plan-doc estimates — fonts are **906 KB** (not ~600;
 > it counts *both* weights × *five* formats), and jQuery ships **external** at 219.7 KB (a real
@@ -257,3 +258,48 @@ Qualitative:
 - **Risk / follow-ups:** `defer` is safe here — the script was already at body-end, so A17
   bootstrap (which runs on DOM-ready) sees a fully-parsed DOM either way; defer only removes the
   parser stall. Suite at the 2 known pre-existing failures (22/24), no new regressions.
+
+### Phase E — Results
+
+**Quantitative:**
+- **Head/SEO added:** every page now emits `<link rel="canonical">`, full Open Graph
+  (`og:type`/`og:site_name`/`og:title`/`og:url`/`og:description`/`og:image`) and Twitter Card
+  (`twitter:card`/`title`/`description`/`image`) — all with **absolute** URLs resolved against
+  `astro.config` `site` (`https://subfolio-astro.ilano.fyi`).
+- **HTML weight cost:** +~0.5 KB/page (largest 13.0 → **13.5 KB**, budget 20 KB — still OK).
+  No JS/CSS/font/image change this phase.
+- Budgets all green: html-page-max 13.5/20, css-total 84.4/96, fonts 47.3/620, js-linked
+  219.7/240.
+- **Cost:** $0 — Opus-owned, no fan-out, no `claude -p`. Backends — DeepSeek 0, Anthropic 0.
+
+**Qualitative:**
+- **What changed:** (1) `Layout.astro` head emits the OG/Twitter/canonical set; new optional
+  props `description`/`ogImage`/`ogType` with site-default fallbacks. (2) `[...path].astro`
+  sets `ogType=website` for listings, `article` for file/single detail, and derives `og:image`
+  from the listing's **first gallery thumbnail** — using the base PNG/JPEG/GIF (not the
+  `.webp`/`.avif` sibling) because OG crawlers have inconsistent modern-format support;
+  `twitter:card` upgrades to `summary_large_image` only when an image is present. (3) optional
+  `<ClientRouter>` (View Transitions) wired behind `siteConfig.enable_view_transitions` —
+  **default OFF** (enabling needs A17 behaviors re-initialized on `astro:page-load`, out of
+  scope); verified the flag toggles the tag on/off then restored to false. (4) new
+  `tests/seo.test.mjs` (5/5) + `npm run test:seo` script.
+- **Render-review:** built 38pp green; `astro check` 0 errors. Root → `og:type=website`,
+  absolute canonical/og:url. Gallery folder (`00_thumbnails`) → absolute base-format og:image +
+  `summary_large_image`. Detail page (`markdown_cheat_sheet.txt`) → `og:type=article`, no
+  og:image, `twitter:card=summary`. `grep dist/ for '{'` clean. Phase D `defer` intact.
+- **Risk / follow-ups:** View Transitions is the one deliberate stretch left inert — turning it
+  on is a follow-up that must re-bind A17/jQuery behaviors per soft-nav. Suite at the 2 known
+  pre-existing failures (`/directory` bytes + markdown render), no new regressions.
+
+---
+
+## Milestone close
+
+All five phases (A measurement → B asset quick-wins → C WebP/AVIF → D jQuery defer → E head/SEO)
+are done. The milestone honored its **measure-don't-block** posture throughout: budgets warn,
+never fail CI; port fidelity was cut loose where it bought real wins (Suisse→Inter, SVG/EOT/TTF
+dropped) but the jQuery teardown was deliberately left out of scope (split+defer only). What
+"modernized" delivered: fonts 906→47 KB, CSS 93.5→84.4 KB minified + non-render-blocking icons,
+WebP/AVIF retina thumbnails (originals untouched), non-blocking deferred jQuery, and a full
+social/SEO head. Deliberately left: jQuery vanilla rewrite, View Transitions (flag wired, off),
+and Lighthouse scoring (measure-don't-block — no perf gate in CI).

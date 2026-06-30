@@ -22,6 +22,9 @@ const cacheRoot = resolve(process.env.SUBFOLIO_THUMB_CACHE ?? "./.thumb-cache");
 // Pre-built .oplx zip artifacts (scripts/gen-oplx.mjs) live out-of-tree too,
 // served under the same /directory/ namespace at `<oplxFolder>.zip`.
 const oplxCacheRoot = resolve(process.env.SUBFOLIO_OPLX_CACHE ?? "./.oplx-cache");
+// Pre-generated embed WebP siblings (scripts/gen-embeds.mjs), served under the
+// same /directory/ namespace at `<embedPath>.webp`.
+const embedCacheRoot = resolve(process.env.SUBFOLIO_EMBED_CACHE ?? "./.embed-cache");
 
 /** Minimal extension → MIME map (mirrors the PHP mime_content_type table). */
 const MIME: Record<string, string> = {
@@ -90,6 +93,9 @@ export function getStaticPaths() {
   const oplxFiles: string[] = [];
   walkFiles(oplxCacheRoot, "", oplxFiles);
   oplxFiles.forEach((p) => paths.add(p));
+  const embedFiles: string[] = [];
+  walkFiles(embedCacheRoot, "", embedFiles);
+  embedFiles.forEach((p) => paths.add(p));
   return [...paths].map((relPath) => ({ params: { path: relPath } }));
 }
 
@@ -107,7 +113,8 @@ export const GET: APIRoute = ({ params }) => {
   const absContent = safeResolve(contentRoot, relPath);
   const absCache = safeResolve(cacheRoot, relPath);
   const absOplx = safeResolve(oplxCacheRoot, relPath);
-  if (absContent === null && absCache === null && absOplx === null) {
+  const absEmbed = safeResolve(embedCacheRoot, relPath);
+  if (absContent === null && absCache === null && absOplx === null && absEmbed === null) {
     return new Response("Forbidden", { status: 403 });
   }
   let body: Buffer;
@@ -120,7 +127,11 @@ export const GET: APIRoute = ({ params }) => {
       try {
         body = readFileSync(absOplx as string);
       } catch {
-        return new Response("Not found", { status: 404 });
+        try {
+          body = readFileSync(absEmbed as string);
+        } catch {
+          return new Response("Not found", { status: 404 });
+        }
       }
     }
   }

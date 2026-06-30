@@ -42,9 +42,16 @@ const rssEmbeds = embeds.filter((e) => e.type === "rss");
 {
   imageEmbeds.length > 0 && (
     <div id={`inline_${position}_image`}>
-      {imageEmbeds.map((image) => (
-        <img src={assetUrl(image.src)} alt="" />
-      ))}
+      {imageEmbeds.map((image) =>
+        image.hasWebp ? (
+          <picture>
+            <source type="image/webp" srcset={assetUrl(image.src + ".webp")} />
+            <img src={assetUrl(image.src)} alt="" />
+          </picture>
+        ) : (
+          <img src={assetUrl(image.src)} alt="" />
+        )
+      )}
       <div class="clear"><!-- --></div>
     </div>
   )

@@ -1,0 +1,72 @@
+---
+/**
+ * Feature cards listing view — ported from upstream pages/listing/features.php.
+ *
+ * Consumes entry.features (Feature[]). Renders a grid of feature cards, each
+ * with an optional thumbnail image and optional title/description.
+ *
+ * Wave component C14 — ported on port/listing-features.
+ */
+import { assetUrl } from "../../lib/routing.ts";
+import type { Feature } from "../../loaders/schema.ts";
+
+interface Props {
+  features: Feature[];
+  /** Folder path relative to content root, for resolving image URLs. */
+  folderPath: string;
+}
+
+const { features, folderPath } = Astro.props;
+---
+
+{
+  features.length > 0 && (
+    <div id="features">
+      <ul>
+        {features.map((feature) => {
+          // Inline style for anchor: width + height from .ftr
+          const styleParts: string[] = [];
+          if (feature.width != null) styleParts.push(`width: ${feature.width}px;`);
+          if (feature.height != null) styleParts.push(`height: ${feature.height}px;`);
+          const style = styleParts.length > 0 ? styleParts.join(" ") : "";
+
+          // Target attribute
+          const target = feature.target != null ? feature.target : "";
+
+          // Image URL: mirrors PHP $item['image_file'] = "/directory/".$folder."/".$feature['image']
+          const imageSrc = feature.image
+            ? assetUrl(folderPath ? `${folderPath}/${feature.image}` : feature.image)
+            : "";
+
+          const hasTitle = feature.title != null && feature.title !== "";
+          const hasDescription = feature.description != null && feature.description !== "";
+          const hasInfo = hasTitle || hasDescription;
+
+          return (
+            <li>
+              <a
+                href={feature.link}
+                {...(target ? { target } : {})}
+                {...(style ? { style } : {})}
+              >
+                {imageSrc && (
+                  <img
+                    src={imageSrc}
+                    width={feature.width ?? undefined}
+                    height={feature.height ?? undefined}
+                  />
+                )}
+                {hasInfo && (
+                  <div class="info">
+                    {hasTitle && <h2>{feature.title}</h2>}
+                    {hasDescription && <p>{feature.description}</p>}
+                  </div>
+                )}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  )
+}

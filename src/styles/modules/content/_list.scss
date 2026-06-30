@@ -1,0 +1,252 @@
+/* @group List */
+
+/* --------------------------------------------------------------
+   MODULES: CONTENT / LISTING LIST VIEW
+-------------------------------------------------------------- */
+
+$height_list: 50px;
+
+.listing {
+  width: auto;
+  overflow: hidden;
+
+  @include breakpoint(small-and-down) {
+    margin-left:- $gutter-mobile;
+    margin-right:- $gutter-mobile;
+
+    .list__row {
+      .list__cell--filename {
+        padding-left:$gutter-mobile;
+        padding-right:$gutter-mobile;
+      }
+    }
+  }
+}
+
+.list--list,
+.list--fit,
+.list--column,
+.list--masonry {
+  width: 100%;
+  position: relative;
+  display:table;
+  border-bottom-width:1px;
+  border-bottom-color:$color-border-light;
+  border-collapse: collapse;
+
+  .list__row {
+    overflow: hidden;
+    margin: 0;
+    display:table-row;
+    color:$color-text-secondary;
+    position:relative;
+    width:100%;
+    border-bottom: 1px solid rgb(241, 241, 241);
+
+    &:after {
+      display: block;
+      content: '';
+      position:absolute;
+      border-top-width:1px;
+      position:absolute;
+      top:0;
+      left:0;
+      right:0;
+    }
+  }
+
+  a.list__row {
+    color:$color-text-secondary;
+  }
+
+  .list__cell {
+    //border-top-width:1px;
+    //border-top-color:$color-border-light;
+    border: none;
+    height: $height_list;
+    line-height:$height_list;
+    display:table-cell;
+    padding-right:20px;
+    overflow:hidden;
+    @include ellipsis();
+  }
+
+  .list__cell--filenametext {
+    @include ellipsis();
+    overflow:hidden;
+  }
+
+  .list__header .list__cell {
+    border-top-width:0;
+    display:table-cell;
+
+    a {
+      color:$color-text-secondary;
+    }
+  }
+
+  a .list__cell--filename {
+    color:$color-text;
+  }
+
+  a.list__body:hover,
+  a.list__body:focus {
+    background-color:$color-hover;
+  }
+
+  a.list__row--empty,
+  a.list__row--empty * {
+    cursor:default;
+    color:$color-text-empty;
+
+    .icon {
+      opacity:0.5;
+    }
+
+    &:hover,
+    &:focus {
+      background-color:rgba($color-bg, 0.5);
+    }
+  }
+
+  span.caps {
+    display: inline;
+    float: none;
+  }
+  span strong {
+    color: inherit;
+  }
+
+  .list__cell--filename {
+    width:55%;
+    // &:last-child {
+    //   width: 100%;
+    //   padding-right: 0;
+    // }
+  }
+
+  .list__cell--filenameicon,
+  .list__cell--filenametext {
+    display:inline-block;
+    vertical-align: middle;
+  }
+  .list__cell--filenameicon {
+    padding-left:10px;
+    padding-right:10px;
+    min-width:26px + 10px + 10px;
+
+    i {
+      margin-left:auto;
+      margin-right:auto;
+      position:relative;
+      top:-1px;
+      display: block;
+    }
+
+    img {
+      display:block;
+    }
+  }
+  .list__cell--filenametext {
+    padding-right: 40px;
+    @include ellipsis;
+  }
+
+  .list__cell--updated {
+    width:8px;
+    height:8px;
+    padding-right:12px;
+  }
+  .list__cell--size,
+  .list__cell--date,
+  .list__cell--kind,
+  .list__cell--comment {
+    min-width: 90px;
+  }
+
+  .list__cell--size,
+  .list__cell--date,
+  .list__cell--kind {
+    width:15%;
+  }
+
+  @include breakpoint(medium-and-down) {
+    .list__cell--kind,
+    .list__cell--comment,
+    .list__header .list__cell--kind,
+    .list__header .list__cell--comment {
+      display: none;
+    }
+
+    .list__cell--size,
+    .list__cell--date,
+    .list__cell--kind {
+      width:auto;
+    }
+  }
+
+  @include breakpoint(small-and-down) {
+    display:block;
+
+    .list__cell--size,
+    .list__cell--updated,
+    .list__cell--date,
+    .list__header .list__cell--size,
+    .list__header .list__cell--updated,
+    .list__header .list__cell--date {
+      display: none;
+    }
+
+    .list__cell--filename {
+      width:100%;
+    }
+
+    .list__row,
+    .list__cell--filename {
+      display:block;
+    }
+
+    .list__cell--filenameicon {
+      padding-left:0;
+    }
+
+    .list__cell--filenametext {
+      width: calc(100% - 85px);
+      padding-right: 0;
+    }
+  }
+}
+
+
+
+
+
+/* --------------------------------------------------------------
+   MODULES: CONTENT / LISTING ICONS
+-------------------------------------------------------------- */
+* html {
+  .list--list,
+  .list--column {
+    .icon .icon_download { position:absolute; }
+  }
+}
+
+.list--list,
+.list--column,
+.list--masonry {
+  .updated {
+    background:#F0F0F0;
+    border-radius:50%;
+    display:block;
+    width:8px;
+    height:8px;
+    vertical-align:middle;
+    position:relative;
+    top:-1px;
+
+    &.updated--new {
+      background:$color-new;
+    }
+  }
+}
+  /* @end */

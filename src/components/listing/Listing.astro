@@ -1,0 +1,37 @@
+---
+/**
+ * Listing composition — ported from upstream pages/listing.php.
+ *
+ * Composes the seven listing partials in the exact PHP include order:
+ *   inline_top → features → gallery → inline_middle →
+ *   files_and_folders → related → inline_bottom
+ *
+ * Each partial self-guards on empty data, so the order is the only contract
+ * this wrapper owns. Consumes a FolderEntry from the loader.
+ */
+import type { FolderEntry } from "../../loaders/schema.ts";
+import { defaultOptions } from "../../lib/site.ts";
+import InlineEmbeds from "./InlineEmbeds.astro";
+import Features from "./Features.astro";
+import Gallery from "./Gallery.astro";
+import FilesAndFolders from "./FilesAndFolders.astro";
+import Related from "./Related.astro";
+
+interface Props {
+  entry: FolderEntry;
+}
+
+const { entry } = Astro.props;
+
+// Folder path relative to content root (root "." → "" for URL building).
+const folderPath = entry.path === "." ? "" : entry.path;
+const listingMode = defaultOptions.listing_mode;
+---
+
+<InlineEmbeds embeds={entry.embeds.top} position="top" />
+<Features features={entry.features} folderPath={folderPath} />
+<Gallery entry={entry} listingMode={listingMode} />
+<InlineEmbeds embeds={entry.embeds.middle} position="middle" />
+<FilesAndFolders entry={entry} />
+<Related items={entry.related} listingMode={listingMode} />
+<InlineEmbeds embeds={entry.embeds.bottom} position="bottom" />

@@ -1,0 +1,36 @@
+---
+/**
+ * Shockwave Flash filekind view — ported from upstream pages/filekinds/swf.php.
+ *
+ * Renders an <EMBED> element (deprecated but kept identical to PHP for
+ * visual diffing) with autoplay, explicit dimensions, and the Flash player
+ * plugin page. Conditionally includes the hideable download box.
+ */
+import { defaultOptions } from "../../lib/site.ts";
+import HideableDownloadBox from "./HideableDownloadBox.astro";
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+interface Props {
+  file: FileViewData;
+}
+
+const f = Astro.props.file;
+
+// Legacy Flash <embed> attributes aren't part of the typed HTML
+// attribute set, so spread an untyped record to keep output identical
+// to the PHP original without tripping astro check.
+const embedAttrs: Record<string, unknown> = {
+  src: f.url,
+  autoplay: f.autoplay,
+  quality: "high",
+  width: f.width,
+  height: f.height,
+  scale: "noscale",
+  type: "application/x-shockwave-flash",
+  pluginspage: "http://public.macromedia.com/go/getflashplayer",
+};
+---
+
+<embed {...embedAttrs} />
+
+{defaultOptions.display_info && <HideableDownloadBox file={f} />}

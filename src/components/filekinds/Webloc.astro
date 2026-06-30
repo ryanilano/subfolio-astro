@@ -1,0 +1,36 @@
+---
+/**
+ * Webloc filekind view — ported from upstream pages/filekinds/webloc.php.
+ *
+ * Renders an internet location file (.webloc) as a styled link box
+ * with the target URL, kind label, and any comment.
+ *
+ * Wave component — C9.
+ */
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+interface Props {
+  file: FileViewData;
+}
+
+const f = Astro.props.file;
+---
+
+<div id="download_box">
+
+  <a id="clickable-zone" href={f.link} target={f.target}>
+    <i class={`icon icon__${f.icon}`}></i>
+    <p id="filename">
+      {f.tag && (
+        <><i class={`tag ${f.tag}`}></i> &nbsp; </>
+      )}
+      {f.filename}
+    </p>
+  </a>
+
+  <dl>
+    <dt>Kind</dt><dd>{f.kindLabel}</dd>
+    <dt>Comment</dt><dd>{f.comment}</dd>
+  </dl>
+
+</div>

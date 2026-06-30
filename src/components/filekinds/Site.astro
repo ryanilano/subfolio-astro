@@ -1,0 +1,33 @@
+---
+/**
+ * Site filekind view — ported from upstream pages/filekinds/site.php.
+ *
+ * Consumes a FileViewData prop. Renders a download-box style detail view
+ * with a "View Site" action instead of a download button.
+ */
+import { t } from "../../lib/i18n.ts";
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+interface Props {
+  file: FileViewData;
+}
+
+const f = Astro.props.file;
+---
+
+<div id="download_box">
+  <a id="clickable-zone" href={f.link} target={f.target}>
+    <i class={`icon icon__${f.icon}`}></i>
+    <p id="filename">
+      {f.tag && <><i class={`tag ${f.tag}`}></i> &nbsp; </>}
+      {f.filename}
+    </p>
+  </a>
+  <dl>
+    <dt>{t("kind")}</dt><dd>{f.kindLabel}</dd>
+    <dt>{t("lastmodified")}</dt><dd>{f.lastmodified}</dd>
+    <dt>{t("size")}</dt><dd>{f.size}</dd>
+    <dt>{t("comment")}</dt><dd>{f.comment}</dd>
+  </dl>
+  <a id="download" href={f.link}>{t("viewsite")}</a>
+</div>

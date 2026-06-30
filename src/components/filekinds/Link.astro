@@ -1,0 +1,32 @@
+---
+/**
+ * Link filekind view — ported from upstream pages/filekinds/link.php.
+ *
+ * Renders a clickable external/internet link box. Simpler than the general
+ * download box: shows only the icon, filename, kind, and comment.
+ *
+ * Wave component C3 — keep markup and CSS classes identical to PHP.
+ */
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+import { t } from "../../lib/i18n.ts";
+
+interface Props {
+  file: FileViewData;
+}
+
+const f = Astro.props.file;
+---
+
+<div id="download_box">
+  <a id="clickable-zone" href={f.link} target={f.target}>
+    <i class={`icon icon__${f.icon}`}></i>
+    <p id="filename">
+      {f.tag && <><i class={`tag ${f.tag}`}></i> &nbsp; </>}
+      {f.filename}
+    </p>
+  </a>
+  <dl>
+    <dt>{t("kind")}</dt><dd>{f.kindLabel}</dd>
+    <dt>{t("comment")}</dt><dd>{f.comment}</dd>
+  </dl>
+</div>

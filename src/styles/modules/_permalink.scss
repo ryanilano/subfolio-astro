@@ -1,0 +1,21 @@
+/* @group Permalink */
+
+$inner_padding:20px;
+$inner_padding_mobile:10px;
+
+
+#info {}
+
+#info-button {
+  display: block;
+  margin-bottom:$gutter-mobile;
+}
+
+#info-box {
+  border: 1px solid #dedede;
+  padding: $inner_padding;
+  max-width: 350px;
+  position: relative;
+}
+
+/* @end */

@@ -1,0 +1,41 @@
+---
+/**
+ * Download box partial — ported from upstream _download_box.php.
+ *
+ * Props: a FileViewData object (from fileHelpers.ts). Renders the icon,
+ * filename, metadata table (kind/size/date/comment), instructions, and
+ * download button inside #download_box.
+ */
+import { t } from "../../lib/i18n.ts";
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+interface Props {
+  file: FileViewData;
+}
+
+const f = Astro.props.file;
+---
+
+<div id="download_box">
+  <a id="clickable-zone" href={f.link} target={f.target}>
+    <i class={`icon icon__grid icon__${f.iconGrid}`}>
+      <span class="icon__extension">{f.extension}</span>
+    </i>
+    <p id="filename">
+      {f.tag && <><i class={`tag ${f.tag}`}></i> &nbsp; </>}
+      {f.filename}
+    </p>
+  </a>
+  <dl>
+    <dt>{t("kind")}</dt><dd>{f.kindLabel}</dd>
+    <dt>{t("lastmodified")}</dt><dd>{f.lastmodified}</dd>
+    <dt>{t("size")}</dt><dd>{f.size}</dd>
+    {f.comment && f.comment !== "—" && (
+      <><dt>{t("comment")}</dt><dd>{f.comment}</dd></>
+    )}
+  </dl>
+  {f.instructions && <p id="instructions" set:html={f.instructions} />}
+  <a id="download" href={`${f.link}?download=true`} target={f.target} download>
+    {t("downloadfile")}
+  </a>
+</div>

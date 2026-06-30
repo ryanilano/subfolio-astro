@@ -1,0 +1,18 @@
+---
+/**
+ * Default/fallback filekind view — ported from upstream pages/filekinds/default.php.
+ *
+ * Renders the download box for any file kind that doesn't have a specialized view.
+ * Mirrors the PHP view which is just `<?php require("_download_box.php"); ?>`.
+ */
+import DownloadBox from "./DownloadBox.astro";
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+interface Props {
+  file: FileViewData;
+}
+
+const f = Astro.props.file;
+---
+
+<DownloadBox file={f} />

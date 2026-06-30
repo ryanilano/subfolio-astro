@@ -1,0 +1,24 @@
+---
+/**
+ * Text filekind view — ported from upstream pages/filekinds/txt.php.
+ *
+ * Displays the raw file body in a standard_paragraph wrapper.
+ * Conditionally includes the hideable download box when display_info is on.
+ */
+import HideableDownloadBox from "./HideableDownloadBox.astro";
+import { defaultOptions } from "../../lib/site.ts";
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+interface Props {
+  file: FileViewData;
+}
+
+const f = Astro.props.file;
+const displayInfo = defaultOptions.display_info;
+---
+
+<div class="standard_paragraph">
+  {f.body}
+</div>
+
+{displayInfo && <HideableDownloadBox file={f} />}

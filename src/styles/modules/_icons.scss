@@ -1,0 +1,183 @@
+.icon {
+  @if $include_icons == false {
+    font:0/0 a;
+    color:transparent;
+    display: inline-block;
+    min-width: 16px;
+    min-height: 16px;
+    vertical-align: middle;
+    background-position: 50%;
+    background-color: transparent;
+    border: 0 none;
+  }
+}
+
+/* info button */
+.icon__info {
+  opacity:0.2;
+
+  &:hover {
+    opacity:0.4;
+  }
+  &.on {
+    @extend .icon__info_close;
+  }
+}
+
+
+/* Some icons must show the extension : https://studio.area17.com/subfolio/2016/99_development/icons/all_icons_2x.png */
+.icon__grid.icon__grid {
+  &_html,
+  &_xls,
+  &_numbers,
+  &_psd,
+  &_sql,
+  &_doc,
+  &_merlin,
+  &_pages,
+  &_ae,
+  &_indd,
+  &_fla,
+  &_pdf,
+  &_swf,
+  &_ai,
+  &_ase,
+  &_eps,
+  &_key,
+  &_ppt {
+    position:relative;
+
+    .icon__extension {
+      position:absolute;
+      bottom:1px;
+      left:1px;
+      right:1px;
+      display:block;
+      text-align:center;
+      @include ellipsis();
+      color:#FFF;
+      font-family:Arial, sans-serif;
+      font-size:9px;
+      line-height:21px;
+      height:21px;
+      font-style:normal;
+      text-transform:uppercase;
+      letter-spacing:1px;
+    }
+  }
+}
+
+a.icon {
+  cursor: pointer;
+}
+
+/* loops the _icons object to make the icons */
+@each $icon, $icon_obj in $icons {
+  @include icon-type($icon);
+}
+
+/* Same icons for multiple extensions are defined here */
+
+/* AI like files */
+.icon__grid {
+  &_ase,
+  &_eps {
+    @extend .icon__grid_ai;
+  }
+}
+.icon__list {
+  &_ase,
+  &_eps {
+    @extend .icon__list_ai;
+  }
+}
+
+/* NUMBERS like files */
+.icon__grid {
+  &_xls {
+    @extend .icon__grid_numbers;
+  }
+}
+.icon__list {
+  &_xls {
+    @extend .icon__list_numbers;
+  }
+}
+
+/* KEY like files */
+.icon__grid {
+  &_ppt {
+    @extend .icon__grid_key;
+  }
+}
+.icon__list {
+  &_ppt {
+    @extend .icon__list_key;
+  }
+}
+
+/* PSD like files */
+.icon__grid {
+  &_sql {
+    @extend .icon__grid_psd;
+  }
+}
+.icon__list {
+  &_sql {
+    @extend .icon__list_psd;
+  }
+}
+
+/* DOC like files */
+.icon__grid {
+  &_merlin,
+  &_pages {
+    @extend .icon__grid_doc;
+  }
+}
+.icon__list {
+  &_merlin,
+  &_pages {
+    @extend .icon__list_doc;
+  }
+}
+
+/* PDF like files */
+.icon__grid {
+  &_fla,
+  &_swf {
+    @extend .icon__grid_pdf;
+  }
+}
+.icon__list {
+  &_fla,
+  &_swf {
+    @extend .icon__list_pdf;
+  }
+}
+
+
+/* Display default icon for all those kind of files */
+.icon__list {
+  &_lock,
+  &_net,
+  &_pop {
+    @extend .icon__list_gen;
+  }
+}
+
+.icon__grid {
+  &_lock,
+  &_net,
+  &_pop,
+  &_site,
+  &_txt {
+    @extend .icon__grid_gen;
+  }
+}
+
+.icon__grid {
+  &_cut {
+    @extend .icon__grid_dir;
+  }
+}

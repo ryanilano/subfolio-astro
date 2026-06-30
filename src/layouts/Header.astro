@@ -1,0 +1,134 @@
+---
+/**
+ * Header — ported from upstream layouts/header.inc.php + prev_next.inc.php.
+ *
+ * Phase 2 (static): no auth state (is_logged_in → false, no user_fullname).
+ * Search box is admin-only in PHP; omitted until Phase 4.
+ */
+import { siteConfig } from "../lib/site.ts";
+import { t } from "../lib/i18n.ts";
+
+export interface Props {
+  /** Breadcrumb trail: { name, url } pairs. Last item has empty url. */
+  breadcrumb?: { name: string; url: string }[];
+  /** Whether to show the header/logo block. */
+  displayHeader?: boolean;
+  /** Whether to show the breadcrumb. */
+  displayBreadcrumb?: boolean;
+  /** Whether to show prev/next navigation. */
+  displayNavigation?: boolean;
+  /** Whether to show the collapse-header toggle. */
+  displayCollapseHeader?: boolean;
+  /** Whether this is the root folder (hides prev/next). */
+  isRoot?: boolean;
+  /** Prev/next links. */
+  prevLink?: string | null;
+  nextLink?: string | null;
+  /** Logo height override. */
+  logoHeight?: number;
+}
+
+const {
+  site_root,
+  site_domain,
+  site_logo_url,
+  site_logo_width,
+  site_logo_height,
+} = siteConfig;
+
+const {
+  displayHeader = true,
+  displayBreadcrumb = true,
+  displayNavigation = true,
+  displayCollapseHeader = true,
+  isRoot = false,
+  breadcrumb = [],
+  prevLink,
+  nextLink,
+  logoHeight: logoH,
+} = Astro.props;
+
+const logoHeight = logoH ?? site_logo_height;
+const logoOffset = logoHeight > 0 ? logoHeight + 30 : 0;
+
+// HTML-escape helper for values interpolated into the raw dropdown string below.
+const esc = (v: string) =>
+  v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+// Mobile breadcrumb dropdown markup. Built as a string and emitted with
+// set:html because Astro treats <script type="text/template"> content as opaque
+// raw text and does NOT interpolate {expressions} inside it (ported from
+// header.inc.php's reversed-breadcrumb template block).
+const dropdownHtml = [
+  '<div class="header__dropdown" data-dropdown>',
+  ...[...breadcrumb]
+    .reverse()
+    .filter((crumb) => crumb.url !== "" && crumb.name !== "")
+    .map((crumb) => `<a class="breadcrumb__folder" href="${esc(crumb.url)}">${esc(crumb.name)}</a>`),
+  `<a class="breadcrumb__root" href="${esc(site_root)}">${esc(site_domain)}</a>`,
+  "</div>",
+].join("\n        ");
+---
+
+<header class="header">
+  <div class="header__logo" data-height={`${logoOffset}px`}>
+    {
+      displayHeader && (
+        <h1 id="logo">
+          <a href={site_root}>
+            {
+              site_logo_url
+                ? <img src={site_logo_url} width={site_logo_width} height={site_logo_height} alt={siteConfig.site_title} />
+                : siteConfig.site_title
+            }
+          </a>
+        </h1>
+      )
+    }
+  </div>
+
+  <div class="header__breadcrumb" data-behavior="toggle_dropdown">
+    {
+      displayBreadcrumb && (
+        <div class="breadcrumb">
+          {t("indexof") && <span class="breadcrumb__index">{t("indexof")}&nbsp;&nbsp;</span>}
+          <a class="breadcrumb__root" href={site_root}>{site_domain}</a>
+          {breadcrumb.map((crumb) => (
+            crumb.url !== "" && crumb.name !== ""
+              ? <><span class="breadcrumb__slash">&nbsp;/&nbsp;</span><a class="breadcrumb__folder" href={crumb.url}>{crumb.name}</a></>
+              : crumb.name !== ""
+                ? <><span class="breadcrumb__slash">&nbsp;/&nbsp;</span><span class="breadcrumb__current" data-trigger><em>{crumb.name}</em> <i class="icon icon__dropdown_arrow"></i></span></>
+                : null
+          ))}
+        </div>
+      )
+    }
+
+    {
+      displayNavigation && !isRoot && (
+        <div class="header__navigation">
+          {prevLink
+            ? <a href={prevLink} class="previous"><i class="icon icon__arrow_left">&larr;</i></a>
+            : <span class="previous faded"><i class="icon icon__arrow_left">&larr;</i></span>
+          }
+          {nextLink
+            ? <a href={nextLink} class="next"><i class="icon icon__arrow_right">&rarr;</i></a>
+            : <span class="next faded"><i class="icon icon__arrow_right">&rarr;</i></span>
+          }
+        </div>
+      )
+    }
+  </div>
+
+  {
+    displayCollapseHeader && displayHeader && (
+      <div class="collapseheader"><a href="#" class="icon icon__collapseheader" data-behavior="collapse_header">{t("collapseheader")}</a></div>
+    )
+  }
+</header>
+
+{
+  displayBreadcrumb && (
+    <script type="text/template" is:inline data-behavior="additional_content" data-breakpoint="medium-and-down,medium,small,small-and-down,xsmall" set:html={dropdownHtml}></script>
+  )
+}

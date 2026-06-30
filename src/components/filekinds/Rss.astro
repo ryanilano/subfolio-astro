@@ -1,0 +1,34 @@
+---
+/**
+ * RSS filekind view — ported from upstream pages/filekinds/rss.php.
+ *
+ * Consumes a FileViewData prop + pre-fetched RSS items.
+ * RSS fetching is deferred to Phase 3; items arrive as props.
+ *
+ * Wave component — mirrors Img.astro prop-signature pattern.
+ */
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+export interface RssItem {
+  title: string;
+  description: string;
+  link: string;
+}
+
+interface Props {
+  file: FileViewData;
+  items: RssItem[];
+}
+
+const { file: f, items } = Astro.props;
+---
+
+<ul class="rss">
+  {items.map((item) => (
+    <li class="standard_paragraph item">
+      <h4>{item.title}</h4>
+      <p>{item.description}</p>
+      <p><a target="_blank" href={item.link}>Read more</a></p>
+    </li>
+  ))}
+</ul>

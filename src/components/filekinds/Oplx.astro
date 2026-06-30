@@ -1,0 +1,41 @@
+---
+/**
+ * OPLX filekind view — ported from upstream pages/filekinds/oplx.php.
+ *
+ * Renders a download box for .oplx folders (zip bundles). Uses the `archive`
+ * path for clickable zone and download link, shows kind + comment in metadata,
+ * and labels the download button "Download Zip".
+ *
+ * Wave component — mirrors Img.astro prop signature and import style.
+ */
+import { t } from "../../lib/i18n.ts";
+import type { FileViewData } from "../../lib/fileHelpers.ts";
+
+interface Props {
+  file: FileViewData;
+}
+
+const f = Astro.props.file;
+---
+
+<div id="download_box">
+  <a id="clickable-zone" href={f.archive} target={f.target}>
+    <i class={`icon icon__grid icon__${f.iconGrid}`}>
+      <span class="icon__extension">{f.extension}</span>
+    </i>
+    <p id="filename">
+      {f.tag && <><i class={`tag ${f.tag}`}></i> &nbsp; </>}
+      {f.filename}
+    </p>
+  </a>
+  <dl>
+    <dt>{t("kind")}</dt><dd>{f.kindLabel}</dd>
+    {f.comment && f.comment !== "—" && (
+      <><dt>{t("comment")}</dt><dd>{f.comment}</dd></>
+    )}
+  </dl>
+  {f.instructions && <p id="instructions" set:html={f.instructions} />}
+  <a id="download" href={`${f.archive}?download=true`} target={f.target} download>
+    {t("downloadzip")}
+  </a>
+</div>

@@ -1,0 +1,75 @@
+/* @group Features */
+
+/* --------------------------------------------------------------
+   MODULES: CONTENT / FEATURES
+-------------------------------------------------------------- */
+
+$inner_padding:20px;
+$inner_padding_mobile:10px;
+
+#features {
+  overflow:hidden;
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  li { float: left; }
+  a {
+    display: block;
+    overflow: hidden;
+    padding: $inner_padding;
+
+    @include breakpoint(xsmall) {
+      padding: $inner_padding_mobile;
+    }
+
+    img {
+      display: block;
+      margin:0 auto;
+      max-width:100%;
+      height:auto;
+    }
+
+    > .info {
+      display: inline-block;
+    }
+  }
+
+  a {
+    .info {
+      padding: 0;
+      text-align: left;
+
+      h2, p {
+        font-size: em(15px, 15px);
+        line-height: em(23px, 15px);
+      }
+
+      h2 {
+        color: inherit;
+        text-transform: none;
+        margin: 0;
+        padding: 9px 0 5px;
+      }
+      p {
+        margin: 0;
+        color: $color-text-secondary;
+      }
+    }
+
+    &:hover {
+      background-color:$color-hover;
+    }
+  }
+}
+
+#features {
+  li {
+    width:auto;
+  }
+}
+
+/* @end */

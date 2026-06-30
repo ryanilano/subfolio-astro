@@ -1,10 +1,4 @@
 {
-	"name": "subfolio",
-	"compatibility_date": "2026-06-27",
-	"assets": {
-		"directory": "./dist"
-	},
-	"observability": {
-		"enabled": true
-	}
+	"name": "subfolio-astro",
+	"pages_build_output_dir": "./dist"
 }

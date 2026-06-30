@@ -19,8 +19,6 @@ node_modules/
 # env
 .env
 .env.production
-# local test-content runner (points the loader + gen-scripts at an out-of-repo dir)
-dev-content.sh
 # logs
 npm-debug.log*
 # macOS

@@ -23,9 +23,29 @@ npm run deploy   # build + publish to Cloudflare (Wrangler, Workers static-asset
 
 ## Content Root
 
-The loader reads `SUBFOLIO_CONTENT_DIR` (see `.env`), defaulting to the bundled
+The loader reads `SUBFOLIO_CONTENT_DIR`, defaulting to the bundled
 `content/examples/` fixture so the repo runs standalone. Point it at a live
 Subfolio install's `directory/` to run against real content.
+
+Set it in `.env` (gitignored):
+
+```sh
+SUBFOLIO_CONTENT_DIR=/path/to/subfolio/directory
+```
+
+Then run through `./dev-content.sh` instead of `npm` directly:
+
+```sh
+./dev-content.sh          # npm run dev
+./dev-content.sh build    # npm run build
+./dev-content.sh preview  # npm run preview
+```
+
+The wrapper is needed because Astro only loads `.env` at render time — not at
+config time when the loader resolves the content dir — and the `gen-*` scripts
+read no dotfile at all. `dev-content.sh` promotes `SUBFOLIO_CONTENT_DIR` from
+`.env` to a real exported shell var so both see it. Plain `npm run dev` still
+works; it just falls back to `content/examples/`.
 
 ## Layout
 

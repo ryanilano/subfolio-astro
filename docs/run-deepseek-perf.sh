@@ -47,11 +47,13 @@ case "$PHASE" in
     )
     ;;
   C)
-    # Phase C fan-out: mirror the Gallery <picture> Gate into the other two image
-    # surfaces. Gate (gen-thumbs.mjs, routing.ts, Gallery.astro) is Opus-owned.
+    # Phase C fan-out: derived-preview WebP/AVIF only. The <picture> shape (Gallery,
+    # thumbnailPipeline.ts, .avif MIME) is Opus-owned and already on main. C1/C2 from
+    # the original plan (features/img <picture>) were DROPPED — those surfaces serve
+    # ORIGINALS, which must stay untouched. Remaining disjoint fan-out, one file each:
     TASKS=(
-      "C1:perf/picture-features"
-      "C2:perf/picture-img"
+      "C1:perf/picture-thumbs"   # scripts/gen-thumbs.mjs — emit webp+avif, retina sizing
+      "C2:perf/picture-test"     # tests/picture.test.mjs — new test, no collision
     )
     ;;
   *)

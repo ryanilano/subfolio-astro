@@ -120,30 +120,51 @@ render identically (render-review Gallery, a detail page, the font swap); `npm r
 
 ## Phase C — Modern image formats. Gated on the Opus `<picture>` Gate.
 
-### Gate (Opus, by hand — NOT fanned out)
-- `scripts/gen-thumbs.mjs` — emit WebP (and optionally AVIF) siblings via
-  `sharp(...).webp({ quality })` / `.avif(...)` into `.thumb-cache/`, preserving the existing
-  staleness + size-guard + dimension rules.
-- `src/lib/routing.ts` — extend `thumbnailFor()` (or add a helper) to return the WebP/AVIF URL
-  set, not just one `url`.
-- **Reference component `src/components/listing/Gallery.astro`** — emit `<picture>` with
-  `<source type="image/avif">` + `<source type="image/webp">` + `<img>` fallback, `width`/`height`
-  preserved (zero-CLS). Pin this as the pattern.
+> **Scope constraint (set this session):** WebP/AVIF apply ONLY to *derived previews*
+> (auto-generated gallery thumbnails). Originals a visitor downloads or views at full
+> resolution stay untouched PNG/JPEG/GIF. So the original C1 (Features `<picture>`) and C2
+> (Detail `<picture>`) were **DROPPED** — those surfaces serve originals. The remaining
+> fan-out is the encoder + a test. Plan: `plans/elegant-coalescing-bee.md`.
 
-### C1 — Features `<picture>` · branch `perf/picture-features` · file `src/components/listing/Features.astro`
-Mirror the Gallery `<picture>` Gate: wrap the feature `<img>` in `<picture>` with avif+webp
-`<source>`s and the `<img>` fallback, using the same routing helper. Keep `width`/`height` and
-the lazy attributes B3b added.
-**Done when:** feature thumbnails emit `<picture>`, fallback `<img>` intact.
+### Gate (Opus — DONE, on `main` at `c155e8f`)
+- `src/lib/thumbnailPipeline.ts` — `ThumbnailResult.sources?: { avif?, webp? }`, resolved from
+  cache siblings (`<name>.webp` / `<name>.avif`), **auto thumbs only** (custom thumbs are
+  user originals → single `url`, no sources). Shares the `?rnd=<ctime>` cache-buster.
+  *(Note: the thumbnail URL helper lives in `thumbnailPipeline.ts`, NOT `routing.ts` as the
+  old draft said — `routing.ts` only has `assetUrl`/`pageUrl`.)*
+- `src/components/listing/Gallery.astro` — `<picture>` with `<source type="image/avif">` +
+  `<source type="image/webp">` + the existing `<img>` fallback, both masonry and list/grid
+  branches; `width`/`height`/`loading`/`decoding` preserved (zero-CLS). Reference pattern.
+- `src/pages/directory/[...path].ts` — `.avif` MIME added (`.webp` already present); the route
+  walker already traverses `.thumb-cache/`, so siblings register as static routes.
 
-### C2 — Detail `<picture>` · branch `perf/picture-img` · file `src/components/filekinds/Img.astro`
-Mirror the Gate for the retina-aware detail variants. Preserve the `width`/`height` math (incl.
-the `/2` retina case) and `decoding="async"`.
-**Done when:** detail image emits `<picture>` with modern sources + original fallback.
+### C1 — Thumbnail encoder · branch `perf/picture-thumbs` · file `scripts/gen-thumbs.mjs`
+After the existing `.resize(resizeOpts).toFile(absThumb)`, ALSO write two siblings **from the
+same resized pipeline**: `sharp(absSource).resize(resizeOpts).webp({ quality: 80 }).toFile(absThumb + ".webp")`
+and `.avif({ quality: 55 }).toFile(absThumb + ".avif")`. Keep the staleness check, the 1 MB
+size-guard, and the skip rules — apply the SAME staleness/skip decision to the siblings (if the
+base is `fresh`, the siblings are too; if the source skips, no siblings).
+**Retina (this session's 2nd constraint):** raise the resize *target* to 2× so previews are
+crisp on retina while still laid out at the 240px display height. Change `THUMB_HEIGHT`-based
+resize from `height: 240` → `height: 480`, and masonry `width: 320` → `width: 640`. Keep
+`withoutEnlargement: true` (never upscale a small source). Keep the **skip** threshold at the
+display height (`h <= THUMB_HEIGHT`, i.e. 240) so already-small images still skip.
+**Done when:** `.thumb-cache/**/-thumbnails/` holds `<name>`, `<name>.webp`, `<name>.avif`
+triples; a tall source's base thumb is ~480px tall; small sources still skip.
 
-**Phase C done when:** `.thumb-cache/` holds WebP/AVIF; `/directory/` serves them (generate in
-the pre-build pass — see [memory: astro-two-phase-build-ordering]); `npm run perf` shows image
-bytes down; Gallery visually identical in a modern browser, JPEG/PNG fallback still served.
+### C2 — Picture test · branch `perf/picture-test` · file `tests/picture.test.mjs` (NEW)
+New `node --test` file, mirroring `tests/perf.budget.test.mjs`. Assert: (a) after
+`gen-thumbs.mjs` runs, a known fixture image has all three cache files (`<name>`/`.webp`/`.avif`);
+(b) the built gallery HTML (`dist/`) contains `<picture>` with `type="image/avif"` and
+`type="image/webp"` `<source>`s and an `<img>` fallback whose `src` is the original-format
+thumbnail (not `.webp`); (c) originals served under `/directory/` keep their PNG/JPEG bytes —
+no webp swap. Lenient like the rest of the suite.
+**Done when:** `node --test tests/picture.test.mjs` passes against a fresh build.
+
+**Phase C done when:** `.thumb-cache/` holds WebP/AVIF triples; `/directory/` serves them
+(generated in the pre-build pass — see [memory: astro-two-phase-build-ordering]); `npm run perf`
+shows image bytes down; Gallery visually identical in a modern browser, PNG/JPEG fallback still
+served; **originals (detail view, feature cards, downloads) verified unchanged**.
 
 ---
 

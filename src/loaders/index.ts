@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import sharp from "sharp";
 import {
   isHidden,
+  isThumbnailDir,
   positionOf,
   displayName,
   fileEnhancerOf,
@@ -108,8 +109,11 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
 
           // Any other hidden item: recurse if it's a real subfolder (so nested
           // listings still get pages), but keep it out of THIS listing.
+          // Exception: build-managed thumbnail dirs are served as raw bytes via
+          // the /directory route only — walking them would emit a pointless
+          // listing page plus a detail page for every generated thumbnail.
           if (isHidden(name, cfg)) {
-            if (isDir) subdirsToWalk.push(relPath);
+            if (isDir && !isThumbnailDir(name)) subdirsToWalk.push(relPath);
             continue;
           }
 

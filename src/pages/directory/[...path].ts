@@ -40,6 +40,7 @@ const MIME: Record<string, string> = {
   ".bmp": "image/bmp",
   ".ico": "image/vnd.microsoft.icon",
   ".webp": "image/webp",
+  ".avif": "image/avif",
   ".mp3": "audio/mpeg",
   ".mp4": "video/mp4",
   ".mov": "video/quicktime",

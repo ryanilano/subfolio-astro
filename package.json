@@ -14,6 +14,9 @@
     "preview": "astro preview",
     "test": "node --test tests/smoke.*.test.mjs",
     "test:a11y": "npm run build && node --test tests/a11y.contrast.test.mjs tests/a11y.axe.test.mjs",
+    "test:perf": "node --test tests/perf.budget.test.mjs",
+    "perf": "npm run build && node scripts/perf-budget.mjs",
+    "ledger": "node scripts/ledger.mjs",
     "deploy": "npm run build && wrangler pages deploy ./dist --project-name subfolio-astro",
     "astro": "astro"
   },

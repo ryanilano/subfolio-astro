@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-06-30T03:51:01.963Z",
+  "phase": "C",
+  "scanDir": "/Users/ryan/local-dev/subfolio-astro-perf-wt",
+  "tasks": [
+    {
+      "task": "C1",
+      "model": "claude-opus-4-8",
+      "reportedBackend": "anthropic (reported)",
+      "inputTokens": 74540,
+      "outputTokens": 3167,
+      "cacheReadTokens": 213248,
+      "cacheCreateTokens": 0,
+      "costUSD": 0.558499,
+      "numTurns": 6,
+      "durationMs": 56843,
+      "isError": false
+    },
+    {
+      "task": "C2",
+      "model": "claude-opus-4-8",
+      "reportedBackend": "anthropic (reported)",
+      "inputTokens": 84850,
+      "outputTokens": 11519,
+      "cacheReadTokens": 570880,
+      "cacheCreateTokens": 0,
+      "costUSD": 0.997665,
+      "numTurns": 18,
+      "durationMs": 173484,
+      "isError": false
+    }
+  ],
+  "byReportedTier": {
+    "anthropic (reported)": {
+      "tasks": 2,
+      "inputTokens": 159390,
+      "outputTokens": 14686,
+      "costUSD": 1.5561639999999999
+    }
+  },
+  "proxyTruth": {
+    "deepseek": {
+      "inputTokens": 159390,
+      "outputTokens": 14686,
+      "requests": 17,
+      "costUSD": 0.0829,
+      "anthropicEquivUSD": 0.6984
+    }
+  },
+  "totals": {
+    "tasks": 2,
+    "inputTokens": 159390,
+    "outputTokens": 14686,
+    "costUSD": 1.5561639999999999,
+    "durationMs": 230327
+  }
+}

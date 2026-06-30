@@ -21,7 +21,13 @@ node_modules/
 .env.production
 # logs
 npm-debug.log*
+# local-only scratch + Claude Code session logs (untracked, never pushed)
+.local/
 # macOS
 .DS_Store
-# personal Claude Code config + hooks (not shared; fan-out workers don't push)
-.claude/
+# personal Claude Code config + hooks (not shared; fan-out workers don't push).
+# Ignore the contents but NOT the dir itself, so the skills exception below can
+# re-include them (git won't descend into a fully-excluded directory).
+.claude/*
+# ...but DO version-control shared skills (the handoff workflow, etc.)
+!.claude/skills/

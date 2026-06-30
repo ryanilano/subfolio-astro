@@ -25,6 +25,13 @@ export interface ThumbnailResult {
   url: string;
   /** "custom" for manual thumbnails, "auto" for pre-generated, "none" if absent. */
   kind: "custom" | "auto" | "none";
+  /**
+   * Modern-format sibling URLs for `<picture>` <source>s, present ONLY for
+   * auto-generated thumbnails that have them on disk. The `url` above stays the
+   * PNG/JPEG/GIF fallback. Custom thumbnails are user-authored originals and
+   * never get sources. Phase C (WebP/AVIF) — see plans/elegant-coalescing-bee.md.
+   */
+  sources?: { avif?: string; webp?: string };
 }
 
 /** Encode each segment of a "/"-relative path, preserving separators. */
@@ -84,8 +91,26 @@ export async function thumbnailFor(
   const thumbRel = parentDir === "." ? `-thumbnails/${name}` : `${parentDir}/-thumbnails/${name}`;
   try {
     const st = await stat(resolve(cacheRoot, thumbRel));
-    const url = `/directory/${encParent}-thumbnails/${encodeURIComponent(name)}?rnd=${Math.floor(st.ctimeMs)}`;
+    const rnd = Math.floor(st.ctimeMs);
+    const base = `/directory/${encParent}-thumbnails/${encodeURIComponent(name)}`;
+    const url = `${base}?rnd=${rnd}`;
+
+    // Modern-format siblings (Phase C). gen-thumbs.mjs writes `<name>.webp` /
+    // `<name>.avif` next to the base thumbnail. Attach each only if it exists on
+    // disk — a missing sibling (e.g. an older cache) just degrades to fewer
+    // <source>s. Originals are never touched; this is the derived preview only.
+    const sources: { avif?: string; webp?: string } = {};
+    for (const fmt of ["avif", "webp"] as const) {
+      try {
+        await stat(resolve(cacheRoot, `${thumbRel}.${fmt}`));
+        sources[fmt] = `${base}.${fmt}?rnd=${rnd}`;
+      } catch {
+        /* sibling not generated — skip this format */
+      }
+    }
+
     const out: ThumbnailResult = { url, kind: "auto" };
+    if (sources.avif || sources.webp) out.sources = sources;
     cache.set(relPath, out);
     return out;
   } catch {

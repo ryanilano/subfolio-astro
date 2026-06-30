@@ -27,6 +27,12 @@ const embedImg = z.object({
   name: z.string(),
   /** Path relative to content root. Dimensions deferred to Phase 3 (sharp). */
   src: z.string(),
+  /**
+   * True when a high-quality WebP sibling was generated for this embed
+   * (scripts/gen-embeds.mjs → .embed-cache/<src>.webp). Set in the loader's
+   * async enrichment pass; drives the <picture> <source> in InlineEmbeds.
+   */
+  hasWebp: z.boolean().optional(),
 });
 
 const embedRss = z.object({

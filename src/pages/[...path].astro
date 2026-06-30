@@ -16,6 +16,7 @@ import Layout from "../layouts/Layout.astro";
 import Listing from "../components/listing/Listing.astro";
 import { loadFileKinds } from "../loaders/filekinds.ts";
 import { buildFileViewData, type FileViewData } from "../lib/fileHelpers.ts";
+import { thumbnailFor } from "../lib/thumbnailPipeline.ts";
 import type { Renderer } from "../lib/renderText.ts";
 import { rssItemsFor, type RssItem } from "../lib/rssFeed.ts";
 import Rss from "../components/filekinds/Rss.astro";
@@ -135,6 +136,10 @@ let fileView: FileViewData | null = null;
 let DetailComponent: ReturnType<typeof componentForKind> | null = null;
 let rssItems: RssItem[] = [];
 
+// Open Graph: ogType per route kind; ogImage from the listing's first thumbnail.
+let ogType: "website" | "article" = "website";
+let ogImage: string | undefined;
+
 if (props.kind === "folder") {
   breadcrumb = buildBreadcrumb(props.entry.path, slideRedirects);
   isRoot = props.entry.path === ".";
@@ -142,11 +147,26 @@ if (props.kind === "folder") {
   const nav = folderSiblingNav(props.entry, allEntries);
   prevLink = nav.prevLink;
   nextLink = nav.nextLink;
+  // og:image = first gallery thumbnail (mirrors Gallery.astro's image filter +
+  // pipeline). Prefer a modern sibling if present; fall back to the base url.
+  const relDir = props.entry.path === "." ? "" : props.entry.path;
+  for (const file of props.entry.files) {
+    if (file.kind !== "img") continue;
+    const relPath = relDir ? `${relDir}/${file.name}` : file.name;
+    const thumb = await thumbnailFor(relPath, contentRoot);
+    if (thumb.url) {
+      // Base PNG/JPEG/GIF thumbnail, not the .webp/.avif sibling — OG crawlers
+      // (Facebook, LinkedIn) have inconsistent modern-format support.
+      ogImage = thumb.url;
+      break;
+    }
+  }
 } else if (props.kind === "single") {
   breadcrumb = buildBreadcrumb(props.entry.path, slideRedirects);
   // .site/.oplx folder rendered as a single file-detail view. Synthesize a
   // ChildFile from the folder so buildFileViewData/componentForKind apply.
   pageClass = "page--detail";
+  ogType = "article";
   title = props.entry.displayName;
   const folderAsFile: ChildFile = {
     name: props.entry.name,
@@ -171,6 +191,7 @@ if (props.kind === "folder") {
     props.entry.path === "." ? props.file.name : `${props.entry.path}/${props.file.name}`;
   breadcrumb = buildBreadcrumb(relPathForCrumb, slideRedirects);
   pageClass = "page--detail";
+  ogType = "article";
   title = props.file.displayName;
   const relPath =
     props.entry.path === "." ? props.file.name : `${props.entry.path}/${props.file.name}`;
@@ -216,6 +237,8 @@ const redirectTo = props.kind === "redirect" ? props.to : null;
       isRoot={isRoot}
       prevLink={prevLink}
       nextLink={nextLink}
+      ogType={ogType}
+      ogImage={ogImage}
     >
       {props.kind === "folder" && <Listing entry={props.entry} />}
       {fileView && fileView.kind === "rss" ? (

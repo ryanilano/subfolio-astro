@@ -83,6 +83,17 @@ const {
   enable_view_transitions,
 } = siteConfig;
 
+// Derive the favicon MIME type from its extension so the <link type> matches the
+// actual asset (PNG/SVG/ICO) instead of being hard-coded to ICO.
+const FAVICON_MIME: Record<string, string> = {
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".gif": "image/gif",
+  ".ico": "image/vnd.microsoft.icon",
+};
+const faviconExt = site_favicon_url?.split("?")[0].match(/\.[a-z0-9]+$/i)?.[0].toLowerCase();
+const faviconType = (faviconExt && FAVICON_MIME[faviconExt]) || "image/vnd.microsoft.icon";
+
 // Full page title: "Page Title — Site Title" or just "Site Title"
 const fullTitle = title ? `${title} — ${site_title}` : site_title;
 
@@ -264,8 +275,8 @@ const colorCss = `
 
   {site_favicon_url && (
     <>
-      <link rel="icon" href={`${site_favicon_url}?v=2`} type="image/vnd.microsoft.icon" />
-      <link rel="shortcut icon" href={`${site_favicon_url}?v=2`} type="image/vnd.microsoft.icon" />
+      <link rel="icon" href={`${site_favicon_url}?v=2`} type={faviconType} />
+      <link rel="shortcut icon" href={`${site_favicon_url}?v=2`} type={faviconType} />
     </>
   )}
 

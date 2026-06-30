@@ -11,7 +11,7 @@ site_logo_height: 53
 ### FAVICON
 ### To inactivate, add "#" before line
 
-site_favicon_url: /config/themes/default/images/favicon.ico
+site_favicon_url: /images/favicon.ico
 
 ### COLOR PALETTE
 ### Create a custom color palettes here: /config/themes/default/colors/

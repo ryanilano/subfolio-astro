@@ -1,0 +1,47 @@
+## YAML NOTE: Indentation, spacing and text case are super important.
+# This file must be encoded as Unicode (UTF-8) for it to work properly.
+
+# To change your logo and other interface elements, go to themes/<theme>/options.yml
+
+site_root: /
+
+### YOUR SITE NAME
+### Appears in the header and HTML title of the page
+
+site_name: Subfolio-Astro
+
+### YOUR DOMAIN
+### Appears in the breadcrumb navigation
+
+site_domain: subfolio-astro.ilano.fyi
+
+### YOUR COPYRIGHT
+### You must turn it on in your theme options to display
+
+site_copyright: "&copy; 2026 Subfolio-Astro"
+
+### YOUR WEBSITE META DESCRIPTION
+### For search engines
+
+site_meta_description: "Subfolio-Astro is a static site generator for portfolios based on folders and markdown."
+
+### YOUR GOOGLE ANALYTICS CODE
+### Remove "#" to activate
+
+# google_analytics_code: "UA-XXXXXX-X"
+
+### YOUR ACTIVE THEME / CONTENT LOCATION
+### Selects which themes/<theme>/options.yml the build reads
+
+theme: default
+directory: directory
+
+### YOUR MARK-UP LANGUAGE (Textile, Markdown or HTML)
+### NOTE: not read here — text rendering is driven by SUBFOLIO_TEXT_RENDERING
+
+text_rendering: HTML
+
+### YOUR THUMBNAIL FILE SIZE CAP (in MB)
+### Thumbnails will not be generated for image files larger than cap
+
+thumbnail_max_filesize: 5

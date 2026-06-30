@@ -24,10 +24,16 @@ const { features, folderPath } = Astro.props;
     <div id="features">
       <ul>
         {features.map((feature) => {
-          // Inline style for anchor: width + height from .ftr
+          // Inline style for anchor: width + height from .ftr.
+          // Deviation from upstream (which emits a hard `height`): we emit
+          // `min-height` so the .ftr-declared size is a floor, not a cap. With
+          // box-sizing:border-box the 20px padding leaves only height-40px of
+          // content area, so image + title + description routinely overflow the
+          // declared box and `overflow:hidden` clips the description. min-height
+          // lets the card grow to fit; nothing is clipped.
           const styleParts: string[] = [];
           if (feature.width != null) styleParts.push(`width: ${feature.width}px;`);
-          if (feature.height != null) styleParts.push(`height: ${feature.height}px;`);
+          if (feature.height != null) styleParts.push(`min-height: ${feature.height}px;`);
           const style = styleParts.length > 0 ? styleParts.join(" ") : "";
 
           // Target attribute

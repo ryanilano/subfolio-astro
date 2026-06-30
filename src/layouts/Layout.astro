@@ -80,6 +80,11 @@ const fullTitle = title ? `${title} — ${site_title}` : site_title;
 // --- Open Graph / Twitter Card -------------------------------------------
 // Absolute canonical URL for this page (Astro.site is set in astro.config).
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
+// Opt out of indexing for non-public deploys (e.g. archive.ilano.fyi). Set at
+// build time via SUBFOLIO_NOINDEX=1; default (demo) build stays indexable.
+// process.env (not import.meta.env) — matches how every other SUBFOLIO_* var is
+// read in this codebase, and Vite won't expose an unprefixed var on import.meta.
+const noindex = process.env.SUBFOLIO_NOINDEX === "1";
 // Description: per-page override → site default → undefined (tag omitted).
 const ogDescription = description || site_meta_description || undefined;
 // og:image must be absolute. Callers pass a root-relative thumbnail URL.
@@ -228,6 +233,7 @@ const colorCss = `
   {enable_view_transitions && <ClientRouter />}
 
   {ogDescription && <meta name="description" content={ogDescription} />}
+  {noindex && <meta name="robots" content="noindex, nofollow" />}
 
   <title>{fullTitle}</title>
 

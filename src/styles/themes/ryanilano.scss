@@ -46,11 +46,19 @@ body {
 
 /* Dark gallery tiles — the signature ryanilano look. Legacy targeted #gallery/.grid/
    .list; in the port the grid is .gallery--grid and each thumbnail box is
-   .gallery_thumbnail. Light tile frame, dark thumbnail well, full-black on hover. */
+   .gallery_thumbnail. Light tile frame, dark thumbnail well, full-black on hover.
+
+   Specificity matters here: base _gallery.scss sets `div.gallery_thumbnail {
+   background-color: inherit }` as `.gallery li a div.gallery_thumbnail` (0,2,3). The
+   thumbnail rule below must MATCH that depth (`.gallery--grid li a div.gallery_thumbnail`,
+   also 0,2,3) so it beats the inherit by source order — a bare `.gallery--grid
+   .gallery_thumbnail` (0,2,0) loses, leaving the well light. The anchor/hover rules
+   already out-rank base. This layer also loads after the inline colorCss palette, so
+   it wins the gallery there too (see Layout.astro). */
 .gallery--grid li a {
   background-color: #e4e4e4;
 }
-.gallery--grid .gallery_thumbnail {
+.gallery--grid li a div.gallery_thumbnail {
   background-color: #333;
 }
 .gallery--grid li a:hover {

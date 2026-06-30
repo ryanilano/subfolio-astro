@@ -3,9 +3,10 @@
 
 ### LOGO (width and height in pixels)
 ### To inactivate logo and display "your site name" instead, add "#" before each line
-### NOTE: theme assets aren't served yet ("+assets" tier) — this path 404s for now.
+### Asset is copied into public/images/logos/ (served at root) since the theme
+### "+assets" tier isn't wired yet.
 
-site_logo_url: config/themes/ryanilano/images/logos/hdr-ryanilano.gif
+site_logo_url: /images/logos/hdr-ryanilano.gif
 site_logo_width: 312
 site_logo_height: 48
 

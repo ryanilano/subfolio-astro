@@ -104,7 +104,7 @@ const ogImageUrl = ogImage ? new URL(ogImage, Astro.site).href : undefined;
 // interpolate `{...}` expressions — emitted raw via <style set:html> below.
 const colorCss = `
     /* BACKGROUND */
-    body, #gallery ul li a div.gallery_thumbnail {
+    body, .gallery li a div.gallery_thumbnail {
       background-color: ${palette.back};
     }
     /* BACKGROUND_SHIFT */
@@ -115,7 +115,7 @@ const colorCss = `
     .list__cell--filename {
       color: ${palette.main_link};
     }
-    .list a:hover, .grid li a:hover {
+    a.list__row:hover {
       background-color: ${palette.main_link_back_hover};
     }
     /* SUB LINKS */
@@ -129,14 +129,14 @@ const colorCss = `
       color: ${palette.sub_link_hover};
     }
     /* GALLERY */
-    #gallery ul li a {
+    .gallery li a {
       color: ${palette.gallery_link};
       background-color: ${palette.gallery_back};
     }
-    #gallery ul li a:hover p {
+    .gallery li a:hover p {
       color: ${palette.gallery_link_hover};
     }
-    #gallery ul li a:hover {
+    .gallery li a:hover {
       background-color: ${palette.gallery_back_hover};
     }
     /* FEATURES */
@@ -195,7 +195,7 @@ const colorCss = `
       background-color: ${palette.text_light};
     }
     /* TEXT_DIMMED */
-    .grid li span.comment {
+    .list__cell--comment {
       color: ${palette.text_dimmed};
     }
     /* FLASH */

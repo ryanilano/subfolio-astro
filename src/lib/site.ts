@@ -31,6 +31,13 @@ export const siteConfig = {
   shadow_style_css: "0 2px 12px rgba(0,0,0,0.15)",
   /** Color palette name (loads from src/config/colors-{name}.yml). */
   color_palette: "default",
+  /**
+   * Opt-in <ClientRouter> SPA navigation (Astro View Transitions). OFF by
+   * default — Phase D's deferred jQuery/A17 bootstrap runs on full page loads;
+   * enabling this needs the A17 behaviors re-initialized on `astro:page-load`,
+   * which is out of this milestone's scope. Flag wired, inert until set true.
+   */
+  enable_view_transitions: false,
 } as const;
 
 /** Default display options — mirrors options.yml (SPEC-theme-api §8). */

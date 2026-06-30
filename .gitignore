@@ -34,3 +34,5 @@ npm-debug.log*
 .claude/*
 # ...but DO version-control shared skills (the handoff workflow, etc.)
 !.claude/skills/
+# legacy PHP Subfolio config dump — local reference for diffing, never committed
+config-legacy/

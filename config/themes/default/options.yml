@@ -4,7 +4,7 @@
 ### LOGO (width and height in pixels)
 ### To inactivate logo and display "your site name" instead, add "#" before each line
 
-site_logo_url: /config/themes/default/images/logos/logo.png
+site_logo_url: /images/logos/logo.png
 site_logo_width: 53
 site_logo_height: 53
 

@@ -11,9 +11,10 @@
  * <style> block (same approach as template_colors.php), overriding the
  * SCSS defaults.
  */
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { ClientRouter } from "astro:transitions";
-import { siteConfig, defaultOptions, type Options } from "../lib/site.ts";
+import { siteConfig, defaultOptions, activeTheme, type Options } from "../lib/site.ts";
 import { loadColorPalette, type ColorPalette } from "../lib/colors.ts";
 import Header from "./Header.astro";
 import Footer from "./Footer.astro";
@@ -64,6 +65,14 @@ const colorsPath = resolve(
   `src/config/colors-${opt.color_palette}.yml`,
 );
 const palette: ColorPalette = loadColorPalette(colorsPath);
+
+// Active-theme override sheet (compiled by gen-css.mjs → public/css/theme-<name>.css).
+// Linked only when it exists, so the default theme (whose look IS main.css) and any
+// theme without a sheet add nothing — no 404. Gate via fs since frontmatter runs at
+// build (SSG); resolve from cwd for the same reason as colorsPath above.
+const hasThemeCss = existsSync(
+  resolve(process.cwd(), `public/css/theme-${activeTheme}.css`),
+);
 
 // Site metadata
 const {
@@ -286,6 +295,12 @@ const colorCss = `
        frontmatter (colorCss) and emitted raw, because Astro <style> blocks are
        compiled as static CSS and do not interpolate expressions. -->
   <style type="text/css" media="screen" is:inline set:html={colorCss}></style>
+
+  {/* Active-theme override sheet — last in <head> so it wins the cascade over
+      both main.css and the inline color palette above. */}
+  {hasThemeCss && (
+    <link href={`/css/theme-${activeTheme}.css?v=1`} type="text/css" rel="stylesheet" />
+  )}
 </head>
 
 <body class={`${pageClass}`}>

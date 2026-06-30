@@ -1,74 +1,57 @@
 {
-  "generatedAt": "2026-06-29T23:47:29.772Z",
-  "phase": "B",
+  "generatedAt": "2026-06-30T03:51:01.963Z",
+  "phase": "C",
   "scanDir": "/Users/ryan/local-dev/subfolio-astro-perf-wt",
   "tasks": [
     {
-      "task": "B1",
+      "task": "C1",
       "model": "claude-opus-4-8",
-      "backend": "anthropic",
-      "inputTokens": 75538,
-      "outputTokens": 1564,
-      "cacheReadTokens": 374016,
+      "reportedBackend": "anthropic (reported)",
+      "inputTokens": 74540,
+      "outputTokens": 3167,
+      "cacheReadTokens": 213248,
       "cacheCreateTokens": 0,
-      "costUSD": 0.603798,
-      "numTurns": 10,
-      "durationMs": 42132,
+      "costUSD": 0.558499,
+      "numTurns": 6,
+      "durationMs": 56843,
       "isError": false
     },
     {
-      "task": "B3a",
+      "task": "C2",
       "model": "claude-opus-4-8",
-      "backend": "anthropic",
-      "inputTokens": 76442,
-      "outputTokens": 2728,
-      "cacheReadTokens": 486528,
+      "reportedBackend": "anthropic (reported)",
+      "inputTokens": 84850,
+      "outputTokens": 11519,
+      "cacheReadTokens": 570880,
       "cacheCreateTokens": 0,
-      "costUSD": 0.6936739999999999,
-      "numTurns": 12,
-      "durationMs": 47165,
-      "isError": false
-    },
-    {
-      "task": "B3b",
-      "model": "claude-opus-4-8",
-      "backend": "anthropic",
-      "inputTokens": 73179,
-      "outputTokens": 916,
-      "cacheReadTokens": 155520,
-      "cacheCreateTokens": 0,
-      "costUSD": 0.466555,
-      "numTurns": 5,
-      "durationMs": 22071,
-      "isError": false
-    },
-    {
-      "task": "B3c",
-      "model": "claude-opus-4-8",
-      "backend": "anthropic",
-      "inputTokens": 75302,
-      "outputTokens": 2179,
-      "cacheReadTokens": 263552,
-      "cacheCreateTokens": 0,
-      "costUSD": 0.5627610000000002,
-      "numTurns": 7,
-      "durationMs": 35552,
+      "costUSD": 0.997665,
+      "numTurns": 18,
+      "durationMs": 173484,
       "isError": false
     }
   ],
-  "byBackend": {
-    "anthropic": {
-      "tasks": 4,
-      "inputTokens": 300461,
-      "outputTokens": 7387,
-      "costUSD": 2.326788
+  "byReportedTier": {
+    "anthropic (reported)": {
+      "tasks": 2,
+      "inputTokens": 159390,
+      "outputTokens": 14686,
+      "costUSD": 1.5561639999999999
+    }
+  },
+  "proxyTruth": {
+    "deepseek": {
+      "inputTokens": 159390,
+      "outputTokens": 14686,
+      "requests": 17,
+      "costUSD": 0.0829,
+      "anthropicEquivUSD": 0.6984
     }
   },
   "totals": {
-    "tasks": 4,
-    "inputTokens": 300461,
-    "outputTokens": 7387,
-    "costUSD": 2.326788,
-    "durationMs": 146920
+    "tasks": 2,
+    "inputTokens": 159390,
+    "outputTokens": 14686,
+    "costUSD": 1.5561639999999999,
+    "durationMs": 230327
   }
 }

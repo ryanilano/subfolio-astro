@@ -34,7 +34,7 @@ Baseline captured Phase A (`dist/perf-budget.json`, this session). `after` fille
 | Linked JS (`main.js`, jQuery+A17) | 219.7 KB | |
 | CSS bytes (`main.css` + `icons.css`) | 93.5 KB unminified | |
 | Font bytes shipped (all weights × formats) | 906.5 KB (svg 573 · ttf 168 · woff 76 · eot 59 · woff2 30) | **47.3 KB** (Inter variable woff2, latin subset) ✅ |
-| Image bytes (served gallery sample) | 85.5 MB png+jpg, no WebP/AVIF | |
+| Image bytes (served gallery sample) | 85.5 MB png+jpg, no WebP/AVIF | **Thumbnails now WebP/AVIF** (−64…−93% per preview, e.g. 120→8 KB AVIF); originals untouched ✅ |
 | Lighthouse perf (optional) | (not yet measured) | |
 | Total token spend / cost | (ledger per phase) | |
 | DeepSeek vs Anthropic task split | (ledger per phase) | |
@@ -192,3 +192,40 @@ Qualitative:
 - What changed; render-review verdict (pages checked, `{...}` grep clean? behaviors verified?)
 - Risk / follow-ups
 ```
+
+---
+
+### Phase C — Results
+
+**Quantitative:**
+- **Per-thumbnail served bytes** (gallery previews, browser picks best format):
+  - `example.png` thumb: **120.4 KB → 8.0 KB AVIF** (−93%) / 12.0 KB WebP
+  - `example.jpg` thumb: **11.1 KB → 4.0 KB AVIF** (−64%) / 5.4 KB WebP
+  - `example.gif` thumb: **16.8 KB → 4.2 KB AVIF** (−75%) / 6.6 KB WebP
+- Derived-preview formats now in build: AVIF 31.7 KB + WebP 47.1 KB total (these are
+  *additive* cache siblings; the browser fetches ONE per thumbnail, not the original-format one).
+- **Originals unchanged:** png 50.4 MB + jpg 31.7 MB of source/downloadable bytes untouched
+  (constraint #1 — verified by magic-byte test + `find` shows zero `.avif`/`.webp` outside
+  `-thumbnails/`).
+- Retina: thumbnail resize target doubled to 480px tall / 640px wide (masonry), laid out at
+  240px → 2× crisp; `withoutEnlargement` keeps small sources from upscaling.
+- Budgets all green: css-total 84.4/96 KB, fonts 47.3/620 KB, html-page-max 13/20 KB,
+  js-linked 219.7/240 KB.
+- **Cost (proxy truth):** DeepSeek **17 requests, $0.0829 actual** vs $0.6984 Anthropic-equiv
+  (**saved $0.6155**); 159,390 in / 14,686 out tokens; backends — **DeepSeek 2 tasks, Anthropic 0**.
+  (The local `claude -p` envelope mislabels these as opus/$1.56 — the Phase-B ledger fix now
+  reports the proxy truth alongside it. The tiering worked this phase.)
+
+**Qualitative:**
+- **What changed:** Gallery thumbnails emit `<picture>` (avif→webp→original `<img>` fallback)
+  in both masonry and list/grid branches; `gen-thumbs.mjs` writes webp(q80)+avif(q55) siblings
+  from the same retina resize; `.avif` MIME added; new `tests/picture.test.mjs` (5/5).
+- **Render-review:** built `dist/00_thumbnails/index.html` — `<picture>` markup correct, fallback
+  `<img src>` is original-format thumbnail (not `.webp`/`.avif`), `width`/`height`/`loading`/
+  `decoding`/`max-height` all preserved (zero-CLS). `grep dist/ for '{'` clean (no leftover
+  interpolation). Served original confirmed PNG by magic bytes.
+- **Scope cut:** original C1 (Features) / C2 (Detail) `<picture>` DROPPED — those serve
+  originals. Phase C = derived gallery previews only.
+- **Risk / follow-ups:** test suite back to the 2 known pre-existing failures (`/directory`
+  bytes + markdown render); fixed a 3rd that B1's CSS-minify had silently broken (aspect-ratio
+  guard regex). AVIF encode adds build time (q55) but cache is incremental (staleness-gated).

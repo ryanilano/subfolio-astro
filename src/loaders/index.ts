@@ -1,5 +1,6 @@
 import type { Loader } from "astro/loaders";
 import { readdirSync, readFileSync, statSync } from "node:fs";
+import { stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import sharp from "sharp";
 import {
@@ -39,6 +40,10 @@ export interface SubfolioLoaderOptions {
 }
 
 const cfg = DEFAULT_CONVENTION_CONFIG;
+
+// Out-of-tree WebP cache for position embeds (scripts/gen-embeds.mjs). Mirrors
+// that script's env default so the loader and the encoder agree on the location.
+const embedCacheRoot = resolve(process.env.SUBFOLIO_EMBED_CACHE ?? "./.embed-cache");
 
 export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
   const contentRoot = resolve(opts.contentDir);
@@ -172,6 +177,19 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
             if (meta.height) feature.imageHeight = meta.height;
           } catch {
             /* unreadable → leave unset, view falls back to box dims */
+          }
+        }
+        // Mark image embeds that got a WebP sibling (scripts/gen-embeds.mjs), so
+        // InlineEmbeds emits a <picture><source> only when one actually exists.
+        for (const group of [data.embeds.top, data.embeds.middle, data.embeds.bottom]) {
+          for (const e of group) {
+            if (e.type !== "img") continue;
+            try {
+              await stat(join(embedCacheRoot, e.src + ".webp"));
+              e.hasWebp = true;
+            } catch {
+              /* no sibling (e.g. .gif or unreadable) → plain <img> */
+            }
           }
         }
         store.set({ id, data });

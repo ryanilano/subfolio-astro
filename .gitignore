@@ -6,6 +6,8 @@ dist/
 .rss-cache/
 # pre-built .oplx zip cache (scripts/gen-oplx.mjs)
 .oplx-cache/
+# pre-generated embed WebP cache (scripts/gen-embeds.mjs)
+.embed-cache/
 # generated CSS + icon Sass map (scripts/gen-css.mjs) — compiled from src/styles + src/img/svg_source
 src/img/_icons.scss
 public/css/main.css

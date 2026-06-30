@@ -1,6 +1,6 @@
 $include_icons: true;
 
 @import 'variables';
-@import '../img/icons';
+@import 'icon-map'; // generated $icons map (src/img/_icon-map.scss), via load path
 @import 'mixins';
 @import 'modules/icons';

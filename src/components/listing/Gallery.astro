@@ -5,14 +5,20 @@
  * Consumes a FolderEntry. Filters to image-kind files and renders a
  * thumbnail gallery in the active listing mode (list/grid/masonry).
  *
- * Phase 2: uses raw file paths (sharp thumbnails → Phase 3),
- * shadow/browser suffix detection deferred to Phase 3.
+ * Phase 3: uses thumbnail pipeline for auto-generated / custom thumbnails,
+ * shadow/browser suffix detection via imageMeta.
  *
  * Wave component — C12.
  */
+import { resolve } from "node:path";
 import { defaultOptions } from "../../lib/site.ts";
-import { assetUrl, pageUrl } from "../../lib/routing.ts";
+import { pageUrl } from "../../lib/routing.ts";
+import { imageMetaFor } from "../../lib/imageMeta.ts";
+import { thumbnailFor } from "../../lib/thumbnailPipeline.ts";
+import type { ThumbnailResult } from "../../lib/thumbnailPipeline.ts";
 import type { FolderEntry } from "../../loaders/schema.ts";
+
+const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 
 interface GalleryImage {
   width: number;
@@ -50,26 +56,46 @@ const displayFilenames = defaultOptions.display_file_names_in_gallery;
 // Canonical "/"-relative folder path (root "." → "") for URL building.
 const relDir = entry.path === "." ? "" : entry.path;
 
-const galleryImages: GalleryImage[] = imageFiles.map((file) => {
-  const relPath = relDir ? `${relDir}/${file.name}` : file.name;
-  // Phase 2: no thumbnail pipeline — raw image bytes from /directory/.
-  const url = assetUrl(relPath);
-  // Anchor points at the image's detail page.
-  const link = pageUrl(relPath);
+const galleryEntries = await Promise.all(
+  imageFiles.map(async (file) => {
+    const relPath = relDir ? `${relDir}/${file.name}` : file.name;
+    const meta = await imageMetaFor(relPath);
 
-  return {
-    width: 0,               // Phase 3 (sharp)
-    height: 0,              // Phase 3 (sharp)
-    shadow: false,          // Phase 3 (suffix detection)
-    browser: false,         // Phase 3 (suffix detection)
-    containerWidth: 0,      // Phase 3 (sharp)
-    containerHeight: thumbnailHeight,
-    class: "gallery_thumbnail",  // Phase 3: "gallery_thumbnail custom" for custom thumbs
-    link,
-    filename: file.displayName,
-    url,
-  };
-});
+    // Run the thumbnail pipeline (SPEC-thumbnails §3.7)
+    const thumb: ThumbnailResult = await thumbnailFor(relPath, contentRoot, listingMode);
+
+    // Suppress if pipeline returned empty (generation failed/skipped — SPEC §3.6)
+    if (thumb.url === "") {
+      return null;
+    }
+
+    // Custom thumbnails use natural dimensions; auto-gen use thumbnailHeight for
+    // container height (SPEC-thumbnails §3.7)
+    const isCustom = thumb.kind === "custom";
+    const thumbClass = isCustom ? "gallery_thumbnail custom" : "gallery_thumbnail";
+
+    const image: GalleryImage = {
+      width: meta.width,
+      height: meta.height,
+      shadow: meta.hasShadow,
+      browser: meta.hasBrowser,
+      containerWidth: isCustom ? meta.width : meta.width,
+      containerHeight: isCustom ? meta.height : thumbnailHeight,
+      class: thumbClass,
+      link: pageUrl(relPath),
+      filename: file.displayName,
+      url: thumb.url,
+    };
+    return { image, rawHeight: meta.height };
+  }),
+);
+
+// Filter out nulls (pipeline returns "" url) and images at-or-below thumbnail
+// height (SPEC-thumbnails §3.8). height 0 = undecodable, keep it.
+const galleryImages: GalleryImage[] = galleryEntries
+  .filter((e) => e !== null)
+  .filter((e) => e.rawHeight === 0 || e.rawHeight > thumbnailHeight)
+  .map((e) => e.image);
 
 /** Build the inline style for the container wrapper div. */
 function containerStyle(img: GalleryImage, isMasonry: boolean): string | undefined {

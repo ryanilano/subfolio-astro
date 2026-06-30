@@ -35,7 +35,7 @@ $include_icons: false; // see icons.scss!
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ icons image-map */
 
-@import '../img/icons';
+@import 'icon-map'; // generated $icons map (src/img/_icon-map.scss), via load path
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ icon classes */
 

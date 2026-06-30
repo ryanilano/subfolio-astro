@@ -8,8 +8,8 @@ dist/
 .oplx-cache/
 # pre-generated embed WebP cache (scripts/gen-embeds.mjs)
 .embed-cache/
-# generated CSS + icon Sass map (scripts/gen-css.mjs) — compiled from src/styles + src/img/svg_source
-src/img/_icons.scss
+# generated CSS + icon Sass map (scripts/gen-css.mjs) — compiled from config/themes/*/css + src/img/svg_source
+src/img/_icon-map.scss
 public/css/main.css
 public/css/icons.css
 public/css/theme-*.css

@@ -1,8 +1,11 @@
 /*
- * ryanilano theme — thin override layer on top of main.css (the default AREA17
- * theme). Compiled by scripts/gen-css.mjs → public/css/theme-ryanilano.css and
- * <link>ed AFTER main.css + the inline color palette (Layout.astro), so these rules
- * win on equal specificity. Activated only when settings.theme = ryanilano.
+ * ryanilano theme — thin override layer on top of the default theme (the base
+ * stylesheet, config/themes/default/css/ → main.css). Lives at
+ * config/themes/ryanilano/css/main.scss; compiled by scripts/gen-css.mjs →
+ * public/css/theme-ryanilano.css and <link>ed AFTER main.css + the inline color
+ * palette (Layout.astro), so these rules win on equal specificity. Activated only
+ * when settings.theme = ryanilano. SCSS, but plain CSS works (CSS is a subset); the
+ * base theme's variables/mixins/$icons are on the load path if you want them.
  *
  * Ported from the 2014 config-legacy/themes/ryanilano/css/main.css. That file was a
  * fork of the whole default sheet (plus an unrelated appended responsive framework);

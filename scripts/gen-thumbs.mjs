@@ -19,13 +19,22 @@
 import sharp from "sharp";
 import { readdirSync, statSync, mkdirSync } from "node:fs";
 import { resolve, join, dirname, basename } from "node:path";
+import { loadSettings } from "../src/loaders/settings.ts";
+import { asNumber } from "../src/loaders/yaml.ts";
 
 // --- Config (SPEC-thumbnails §3.2, §3.10) -------------------------------
 const THUMB_WIDTH = 320;
 const THUMB_HEIGHT = 240;
-const MAX_FILESIZE_BYTES = 1 * 1024 * 1024; // thumbnail_max_filesize = 1 MB
 const IMG_EXTS = new Set([".gif", ".png", ".jpg", ".jpeg"]);
 const LISTING_MODE = process.env.SUBFOLIO_LISTING_MODE ?? "list";
+
+// Source-size cap from settings.yml (SPEC-config §15): images larger than
+// `thumbnail_max_filesize` MB are skipped. Read from the same merged config the
+// loaders use (honors SUBFOLIO_CONFIG_DIR); PHP baseline is 1 MB when unset.
+// site.ts deliberately excludes this key — this script is its dedicated source.
+const configDir = process.env.SUBFOLIO_CONFIG_DIR ?? "./config";
+const THUMB_MAX_MB = asNumber(loadSettings(configDir).thumbnail_max_filesize, 1);
+const MAX_FILESIZE_BYTES = THUMB_MAX_MB * 1024 * 1024;
 
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 export const cacheRoot = resolve(process.env.SUBFOLIO_THUMB_CACHE ?? "./.thumb-cache");
@@ -133,7 +142,7 @@ async function main() {
     }
   }
   console.log(
-    `[gen-thumbs] ${images.length} image(s) → ${created} generated, ${fresh} fresh, ${skip} skipped (cache: ${cacheRoot})`,
+    `[gen-thumbs] ${images.length} image(s) → ${created} generated, ${fresh} fresh, ${skip} skipped (cap: ${THUMB_MAX_MB} MB, cache: ${cacheRoot})`,
   );
 }
 

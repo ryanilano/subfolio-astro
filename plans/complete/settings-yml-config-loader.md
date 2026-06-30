@@ -4,14 +4,14 @@
 
 Today, every site-level value (title, domain, copyright, meta description) and every
 display toggle (grid vs list, visible columns, sort, header chrome) is **hardcoded** in
-[src/lib/site.ts](../src/lib/site.ts) as two `const` objects — `siteConfig` and
+[src/lib/site.ts](../../src/lib/site.ts) as two `const` objects — `siteConfig` and
 `defaultOptions`. The file's own header admits this is a placeholder: *"Values here
 mirror the legacy config. In production these would come from env vars or a config file."*
 
 The legacy PHP engine read these from `config/settings/settings.yml` (site-wide) and the
 active theme's `config/themes/<theme>/options.yml` (display toggles), merged over
 hard-coded defaults. Reference copies of those files are archived in
-[config-legacy/](../config-legacy/).
+[config-legacy/](../../config-legacy/).
 
 **Goal:** make the build actually consume a committed `config/settings.yml` + the active
 theme's `config/themes/<theme>/options.yml`, so the site reflects real config instead of
@@ -38,13 +38,13 @@ placeholders — while keeping all ~13 component consumers unchanged.
   - **Known caveat:** legacy `options.yml` points logo/favicon at `config/themes/...`
     paths Astro won't serve yet. Reading the value is harmless; the asset just 404s and the
     existing **empty-logo → text site-name** fallback in
-    [Header.astro](../src/layouts/Header.astro) kicks in. Serving those assets is a clean
+    [Header.astro](../../src/layouts/Header.astro) kicks in. Serving those assets is a clean
     follow-up ("+assets" tier), explicitly out of scope here.
 
 ## Approach
 
-Follow the existing loader pattern exactly: [src/loaders/filekinds.ts](../src/loaders/filekinds.ts)
-reads YAML via `parseSubfolioYaml` from [src/loaders/yaml.ts](../src/loaders/yaml.ts),
+Follow the existing loader pattern exactly: [src/loaders/filekinds.ts](../../src/loaders/filekinds.ts)
+reads YAML via `parseSubfolioYaml` from [src/loaders/yaml.ts](../../src/loaders/yaml.ts),
 caches the result, and is path-resolved by the caller. We mirror that for settings.
 
 ### 1. Commit neutral sample config into `config/`
@@ -105,11 +105,11 @@ same-named fields (the port flattened settings+options; options wins — matches
 ## Files
 
 - **New (committed config):** `config/settings.yml`, `config/themes/default/options.yml`.
-- **New (code):** [src/loaders/settings.ts](../src/loaders/settings.ts) — `loadSettings`,
+- **New (code):** [src/loaders/settings.ts](../../src/loaders/settings.ts) — `loadSettings`,
   `loadThemeOptions`, `THEME_DEFAULT`.
-- **Edit:** [src/lib/site.ts](../src/lib/site.ts) — defaults → merge; same exports.
-- **Reuse (no edit):** [src/loaders/yaml.ts](../src/loaders/yaml.ts) `parseSubfolioYaml`;
-  [src/loaders/filekinds.ts](../src/loaders/filekinds.ts) as the structural template.
+- **Edit:** [src/lib/site.ts](../../src/lib/site.ts) — defaults → merge; same exports.
+- **Reuse (no edit):** [src/loaders/yaml.ts](../../src/loaders/yaml.ts) `parseSubfolioYaml`;
+  [src/loaders/filekinds.ts](../../src/loaders/filekinds.ts) as the structural template.
 - **No change:** the ~13 importers of `siteConfig` / `defaultOptions`
   (Layout, Header, Footer, Listing, Gallery, FilesAndFolders, Related, `filekinds/*`).
 

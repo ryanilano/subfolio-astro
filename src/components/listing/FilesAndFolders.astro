@@ -39,7 +39,20 @@ const listingCtx: ListingContext = {
 const items: ListingItem[] = buildListingItems(entry, listingCtx, opt);
 
 const haveFiles = items.length > 0;
-const isEmptyFolder = entry.files.length === 0 && entry.folders.length === 0;
+// Mirror upstream is_empty_folder(): file_or_folder_count(TRUE) counts every
+// on-disk entry incl. hidden/.ftr/embeds, so the folder is "empty" only when it
+// physically holds nothing. Featuring items away (or having only embeds/related)
+// must NOT trigger the message — otherwise pages like 03_featuring_content show
+// "No items in this directory." beneath their feature cards.
+const hasEmbeds =
+  entry.embeds.top.length + entry.embeds.middle.length + entry.embeds.bottom.length > 0;
+const isEmptyFolder =
+  entry.files.length === 0 &&
+  entry.folders.length === 0 &&
+  entry.features.length === 0 &&
+  entry.related.length === 0 &&
+  entry.excluded.length === 0 &&
+  !hasEmbeds;
 const isGrid = opt.listing_mode === "grid";
 ---
 

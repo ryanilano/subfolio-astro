@@ -77,7 +77,7 @@ side-by-side against identical content for diffing. No data migration.
 Post-port perf pass; port-fidelity constraint cut loose, **measure-don't-block** budget posture
 (warn-only, never fail CI). Full task log + per-phase results live in
 [DEEPSEEK-TASKS-perf.md](DEEPSEEK-TASKS-perf.md); approved plan in
-[../plans/zippy-coalescing-rainbow.md](../plans/zippy-coalescing-rainbow.md).
+[../plans/complete/milestone6-perf-build-modernization.md](../plans/complete/milestone6-perf-build-modernization.md).
 
 - [x] Phase A — Measurement gate (perf-budget harness, ledger, baseline)
 - [x] Phase B — Asset quick-wins (CSS minify, Inter font diet, lazy imgs, icons media-swap)

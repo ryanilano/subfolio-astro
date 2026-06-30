@@ -1,7 +1,7 @@
 # Spike: port the ryanilano theme CSS (deferred)
 
 **Status:** SPIKE / deferred. Out of scope for the settings.yml config task
-([fluffy-noodling-goblet.md](fluffy-noodling-goblet.md)). Captured so it isn't lost.
+([settings-yml-config-loader.md](settings-yml-config-loader.md)). Captured so it isn't lost.
 
 ## The finding
 

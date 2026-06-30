@@ -60,7 +60,7 @@ merges). Perf work mostly **edits shared files**, which does *not* fan out safel
   budget/test files, the font partial, docs — each task touches a *different* file, mirroring a
   reference the Gate pins (exactly how the Phase-2 Wave mirrored `Img.astro`).
 
-Per [AGENTS.md](../AGENTS.md): a green `astro build` does **not** prove a render. Every merge gets a
+Per [AGENTS.md](../../AGENTS.md): a green `astro build` does **not** prove a render. Every merge gets a
 render-review (`npm run preview`, grep `dist/` for leftover `{...}` tokens, eyeball the page).
 
 ---
@@ -75,10 +75,10 @@ The Gate every later wave verifies against. **No behavior change; establishes th
   exits non-zero) per the locked decision.
 - **New `tests/perf.budget.test.mjs`** — asserts presence/shape of the report and soft ceilings
   (logs a `WARN` line over budget, still passes). Mirrors the structure of
-  [tests/smoke.routes.test.mjs](../tests/smoke.routes.test.mjs) + [tests/_dist.mjs](../tests/_dist.mjs).
+  [tests/smoke.routes.test.mjs](../../tests/smoke.routes.test.mjs) + [tests/_dist.mjs](../../tests/_dist.mjs).
 - **`package.json`** — add `"perf": "npm run build && node scripts/perf-budget.mjs"`.
 - **Author the fan-out scaffolding**: `docs/DEEPSEEK-TASKS-perf.md` (task briefs) and
-  `docs/run-deepseek-perf.sh` (copy of [docs/run-deepseek-tasks.sh](../docs/run-deepseek-tasks.sh):
+  `docs/run-deepseek-perf.sh` (copy of [docs/run-deepseek-tasks.sh](../../docs/run-deepseek-tasks.sh):
   worktree-per-task off `main`, throttled parallel `claude -p`, proxy auto-switch with EXIT-trap
   restore, **guard check that `scripts/perf-budget.mjs` exists** before fanning out).
 - **Build the model/token ledger into the runner** (the new accountability req): launch each
@@ -186,7 +186,7 @@ The numbers come straight from `dist/perf-budget.json` (perf harness) and `docs/
 
 ## Milestone scoreboard
 
-A single rollup table maintained in [docs/ROADMAP.md](../docs/ROADMAP.md) (and mirrored at the top
+A single rollup table maintained in [docs/ROADMAP.md](../../docs/ROADMAP.md) (and mirrored at the top
 of `DEEPSEEK-TASKS-perf.md`), one row per metric, `before → after`:
 
 | Metric | Before (Phase A baseline) | After (milestone close) |
@@ -227,5 +227,5 @@ Transitions, auth) for a future milestone.
   + render-review each branch, tear down worktrees (`git worktree remove`).
 - **Commits:** offer to squash each phase to one commit before pushing (per
   [memory: git-squash-per-phase]); push to `main` auto-deploys via the existing GitHub Actions CI.
-- **Docs:** update [docs/ROADMAP.md](../docs/ROADMAP.md) with this as the post-port milestone and
+- **Docs:** update [docs/ROADMAP.md](../../docs/ROADMAP.md) with this as the post-port milestone and
   check off phases as they land.

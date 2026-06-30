@@ -80,6 +80,14 @@ echo ">> switching proxy -> deepseek"
 curl -sS -X POST "$PROXY/_proxy/mode" -d 'backend=deepseek' >/dev/null
 trap 'echo ">> restoring proxy -> anthropic"; curl -sS -X POST "$PROXY/_proxy/mode" -d "backend=anthropic" >/dev/null' EXIT
 
+# Snapshot the proxy's OWN cumulative cost accounting BEFORE fan-out. /_proxy/cost
+# is the only source that knows the real backend + DeepSeek-priced spend — the
+# per-worker `claude -p` JSON always reports the local Anthropic envelope
+# (claude-* id, Anthropic pricing) regardless of where the proxy routed it. The
+# ledger diffs after-minus-before to attribute THIS phase's spend to the backend
+# that actually served it.
+curl -sS "$PROXY/_proxy/cost" >"$WT_DIR/_cost-before.json" 2>/dev/null || echo '{}' >"$WT_DIR/_cost-before.json"
+
 # --- launch -----------------------------------------------------------------
 run_task() {
   local id="$1" branch="$2"
@@ -112,9 +120,13 @@ done
 wait
 
 # --- ledger -----------------------------------------------------------------
+# Snapshot the proxy's cumulative cost AFTER fan-out; the ledger diffs it against
+# _cost-before.json to get the real backend/spend for this phase.
+curl -sS "$PROXY/_proxy/cost" >"$WT_DIR/_cost-after.json" 2>/dev/null || echo '{}' >"$WT_DIR/_cost-after.json"
 echo
-echo ">> building model/token ledger from $WT_DIR/*.json"
-node "$REPO/scripts/ledger.mjs" "$WT_DIR" --phase="$PHASE" || true
+echo ">> building model/token ledger from $WT_DIR/*.json (+ proxy cost delta)"
+node "$REPO/scripts/ledger.mjs" "$WT_DIR" --phase="$PHASE" \
+  --cost-before="$WT_DIR/_cost-before.json" --cost-after="$WT_DIR/_cost-after.json" || true
 
 # --- summary ----------------------------------------------------------------
 echo

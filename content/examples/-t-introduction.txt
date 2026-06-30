@@ -1,8 +1,8 @@
-h1. Subfolio Enhancers
+# Subfolio Enhancers
 
-h2. Demo files
+## Demo files
 
-h3. Getting started with Subfolio enhancers
+### Getting started with Subfolio enhancers
 
 Here is everything you need to take advantage of enhancers... just copy these files and customize. 
 

@@ -7,13 +7,14 @@
  * Consumes entry.embeds.{top,middle,bottom} filtered by the `position` prop.
  *
  * RSS items are read from the build-time cache (scripts/gen-rss.mjs →
- * src/lib/rssFeed.ts), mirroring upstream _inline_rss.php. Deferred: text
- * rendering (Phase 5 Textile/MD).
+ * src/lib/rssFeed.ts), mirroring upstream _inline_rss.php. Text bodies are
+ * rendered through renderText() (Phase 5) per the embed's recorded renderer.
  *
  * Wave component — C16.
  */
 import { assetUrl } from "../../lib/routing.ts";
 import { rssItemsFor } from "../../lib/rssFeed.ts";
+import { renderText, type Renderer } from "../../lib/renderText.ts";
 import type { Embed } from "../../loaders/schema.ts";
 
 interface Props {
@@ -31,7 +32,9 @@ const rssEmbeds = embeds.filter((e) => e.type === "rss");
 {
   textEmbeds.length > 0 && (
     <div id={`inline_${position}_text`} class="standard_paragraph">
-      {textEmbeds.map((text) => <Fragment set:html={text.rawText} />)}
+      {textEmbeds.map((text) => (
+        <Fragment set:html={renderText(text.rawText ?? "", (text.renderer ?? "none") as Renderer)} />
+      ))}
     </div>
   )
 }

@@ -11,7 +11,7 @@ import type { Renderer } from "./loaders/embeds.ts";
  */
 
 const contentDir = process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples";
-const renderer = (process.env.SUBFOLIO_TEXT_RENDERING ?? "textile") as Renderer;
+const renderer = (process.env.SUBFOLIO_TEXT_RENDERING ?? "markdown") as Renderer;
 
 // filekinds.yml is bundled at <repo>/config/filekinds.yml.
 const filekindsPath = fileURLToPath(new URL("../config/filekinds.yml", import.meta.url));

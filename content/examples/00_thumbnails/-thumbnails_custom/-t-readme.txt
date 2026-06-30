@@ -1,6 +1,6 @@
-h1. Custom Thumbnails
+# Custom Thumbnails
 
-h2. Enhancer
+## Enhancer
 
 If a -thumbnails-custom/ folder exists, any thumbnails within it will override the auto-generated -thumbnails/ folder content.
 

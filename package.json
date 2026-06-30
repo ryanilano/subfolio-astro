@@ -7,9 +7,10 @@
     "gen-thumbs": "node scripts/gen-thumbs.mjs",
     "gen-css": "node scripts/gen-css.mjs",
     "gen-rss": "node scripts/gen-rss.mjs",
-    "dev": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && astro dev",
-    "start": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && astro dev",
-    "build": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && astro check && astro build",
+    "gen-oplx": "node scripts/gen-oplx.mjs",
+    "dev": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && node scripts/gen-oplx.mjs && astro dev",
+    "start": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && node scripts/gen-oplx.mjs && astro dev",
+    "build": "node scripts/gen-thumbs.mjs && node scripts/gen-css.mjs && node scripts/gen-rss.mjs && node scripts/gen-oplx.mjs && astro check && astro build",
     "preview": "astro preview",
     "deploy": "npm run build && wrangler deploy",
     "astro": "astro"
@@ -24,6 +25,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "@types/node": "^26.0.1",
+    "archiver": "^8.0.0",
     "lightningcss": "^1.32.0",
     "sass": "^1.97.3",
     "typescript": "^5.9.3",

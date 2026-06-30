@@ -13,6 +13,7 @@ import type { FileKind } from "../loaders/filekinds.ts";
 import { parseSubfolioYaml, asNumber, asString } from "../loaders/yaml.ts";
 import { assetUrl } from "./routing.ts";
 import { imageMetaFor } from "./imageMeta.ts";
+import { renderText, type Renderer } from "./renderText.ts";
 
 /** The complete shape a filekind view receives — ChildFile + computed extras. */
 export interface FileViewData {
@@ -125,6 +126,8 @@ export interface FileViewContext {
   kinds: FileKind[];
   /** Relative file path from content root. */
   relPath: string;
+  /** Text render engine for the file body (none|textile|markdown). */
+  renderer: Renderer;
 }
 
 /**
@@ -238,7 +241,11 @@ export async function buildFileViewData(
     count,
     cache,
     instructions,
-    body: "",               // Phase 5 (Textile/MD rendering)
-    archive: `/${ctx.folderPath}`,  // For .oplx
+    // Rendered file body for txt views (ports format::get_rendered_text()).
+    // Only text kinds carry a body; others stay empty.
+    body: file.kind === "txt" ? renderText(safeReadText(absPath), ctx.renderer) : "",
+    // .oplx download → the pre-built zip artifact (scripts/gen-oplx.mjs),
+    // served under /directory/<folder>.zip. Other kinds don't use `archive`.
+    archive: file.kind === "oplx" ? assetUrl(`${ctx.relPath}.zip`) : `/${ctx.folderPath}`,
   };
 }

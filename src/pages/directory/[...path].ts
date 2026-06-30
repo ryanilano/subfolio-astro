@@ -19,6 +19,9 @@ const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examp
 // are served under the same /directory/ namespace, so the route walker and GET
 // handler fall back to this cache for any path not present in the content root.
 const cacheRoot = resolve(process.env.SUBFOLIO_THUMB_CACHE ?? "./.thumb-cache");
+// Pre-built .oplx zip artifacts (scripts/gen-oplx.mjs) live out-of-tree too,
+// served under the same /directory/ namespace at `<oplxFolder>.zip`.
+const oplxCacheRoot = resolve(process.env.SUBFOLIO_OPLX_CACHE ?? "./.oplx-cache");
 
 /** Minimal extension → MIME map (mirrors the PHP mime_content_type table). */
 const MIME: Record<string, string> = {
@@ -83,6 +86,9 @@ export function getStaticPaths() {
   const cacheFiles: string[] = [];
   walkFiles(cacheRoot, "", cacheFiles);
   cacheFiles.forEach((p) => paths.add(p));
+  const oplxFiles: string[] = [];
+  walkFiles(oplxCacheRoot, "", oplxFiles);
+  oplxFiles.forEach((p) => paths.add(p));
   return [...paths].map((relPath) => ({ params: { path: relPath } }));
 }
 
@@ -99,7 +105,8 @@ export const GET: APIRoute = ({ params }) => {
   // traversal-guarded; content wins if a path somehow exists in both.
   const absContent = safeResolve(contentRoot, relPath);
   const absCache = safeResolve(cacheRoot, relPath);
-  if (absContent === null && absCache === null) {
+  const absOplx = safeResolve(oplxCacheRoot, relPath);
+  if (absContent === null && absCache === null && absOplx === null) {
     return new Response("Forbidden", { status: 403 });
   }
   let body: Buffer;
@@ -109,7 +116,11 @@ export const GET: APIRoute = ({ params }) => {
     try {
       body = readFileSync(absCache as string);
     } catch {
-      return new Response("Not found", { status: 404 });
+      try {
+        body = readFileSync(absOplx as string);
+      } catch {
+        return new Response("Not found", { status: 404 });
+      }
     }
   }
   // Copy into a fresh ArrayBuffer-backed view. node's Buffer is typed over

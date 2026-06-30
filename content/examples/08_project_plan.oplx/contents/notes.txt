@@ -1,0 +1,2 @@
+This is a sample OmniPlan-style package used to exercise the .oplx
+build-time zip artifact (Phase 5 D). The whole folder is zipped at build.

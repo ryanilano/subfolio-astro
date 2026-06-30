@@ -1,6 +1,6 @@
-h1. Hiding content
+# Hiding content
 
-h2. Enhancer
+## Enhancer
 
 Did you know that you can hide any file or folder simply by putting a dash in the name? For example, this folder is called -hidden (look in the URL) and if you didn't notice, it wasn't listed in the file listing.
 

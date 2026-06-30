@@ -229,3 +229,31 @@ Qualitative:
 - **Risk / follow-ups:** test suite back to the 2 known pre-existing failures (`/directory`
   bytes + markdown render); fixed a 3rd that B1's CSS-minify had silently broken (aspect-ratio
   guard regex). AVIF encode adds build time (q55) but cache is incremental (staleness-gated).
+
+### Phase D — Results
+
+**Quantitative:**
+- **Per-page HTML weight: unchanged (13.0 KB largest).** The baseline correction stands —
+  `main.js` already shipped EXTERNAL (cached `<script src>`), never inlined per page, so the
+  plan's "get the 225 KB out of the HTML doc" win was already banked at measurement time. The
+  225.7 KB jQuery bundle stays a single cached request (`js-linked-total 219.7/240 KB`, ok).
+- **The real delta is parse-timing, not bytes:** `<script src="/js/main.js?v=2" defer>` — the
+  225 KB no longer blocks HTML parsing / DOM construction; it loads in parallel and executes
+  after DOMContentLoaded. `?v=2` gives a cache-bust handle for future jQuery/A17 changes.
+- Budgets all green (unchanged from C): css-total 84.4/96 KB, fonts 47.3/620 KB,
+  html-page-max 13.0/20 KB, js-linked 219.7/240 KB.
+- **Cost:** $0 — Opus-owned, no fan-out, no `claude -p` calls (single in-session edit).
+  Backends — DeepSeek 0 tasks, Anthropic 0 tasks.
+
+**Qualitative:**
+- **What changed:** one line in `Layout.astro` — added `defer` + `?v=2` to the end-of-body
+  jQuery `<script>`. Kept `is:inline` so Astro emits the tag verbatim as a plain external
+  request (it does NOT inline the file — confirmed: 0 occurrences of the jQuery body in
+  `dist/index.html`); dropping `is:inline` would have made Astro try to bundle/transform it.
+- **Render-review:** built 38pp green. Rendered tag is `<script src="/js/main.js?v=2" defer>`.
+  All seven `data-behavior` hooks present across all 38 pages (`additional_content`,
+  `collapse_header`, `hover_list`, `show_articles`, `show_info`, `toggle_dropdown`,
+  `toggle_img`); `A17.Helpers.pop` intact in `main.js`. `grep dist/ for '{'` clean.
+- **Risk / follow-ups:** `defer` is safe here — the script was already at body-end, so A17
+  bootstrap (which runs on DOM-ready) sees a fully-parsed DOM either way; defer only removes the
+  parser stall. Suite at the 2 known pre-existing failures (22/24), no new regressions.

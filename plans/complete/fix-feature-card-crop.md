@@ -15,7 +15,7 @@ the 250:230 ratio makes the image render far too tall (~193px in a ~210px column
 correct ~134px), pushing the title + description below the 230px box where `overflow:hidden`
 crops them.
 
-Upstream PHP keeps these separate: [Subfolio.php:733-740](../subfolio/engine/application/libraries/Subfolio.php#L733-L740)
+Upstream PHP keeps these separate: [Subfolio.php:733-740](../../subfolio/engine/application/libraries/Subfolio.php#L733-L740)
 runs `getimagesize()` on the actual image file to get `image_width`/`image_height`, distinct
 from the box `width`/`height`, and the view emits the *image* dims on the `<img>`. Our port
 collapsed the two into one. This restores the separation faithfully.

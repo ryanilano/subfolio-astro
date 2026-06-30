@@ -5,7 +5,7 @@
 The port ships only the **default** AREA17 theme. The active theme name (`settings.theme`)
 today drives `options.yml` toggles and a `color_palette` *name* — but **no mechanism loads a
 per-theme stylesheet**. `gen-css.mjs` compiles `src/styles/main.scss` → `/public/css/main.css`,
-linked once at [Layout.astro:264](../src/layouts/Layout.astro#L264); the only theme-aware CSS is
+linked once at [Layout.astro:264](../../src/layouts/Layout.astro#L264); the only theme-aware CSS is
 the inline `colorCss` `<style set:html>` block (palette *values*, not structure). The live
 ryanilano.com look — a dark-tile gallery on `#ececec` — lived in a customized theme CSS that was
 never ported (captured in [spike-ryanilano-theme-css.md](spike-ryanilano-theme-css.md)).
@@ -33,7 +33,7 @@ faithful `ryanilano` theme as the demonstrating case. Default theme is unaffecte
   legacy "removed" hunks (hr, `.columns4`, `ul.group`, iOS tap-highlight) are irrelevant.
 - **Selectors renamed.** `#container`/`#logo`/`.standard_paragraph` survive, but the dark-tile
   targets do **not**: port grid markup is `div.gallery.gallery--grid > ul > li > a.focusable >
-  div.gallery_thumbnail` ([Gallery.astro:128-167](../src/components/listing/Gallery.astro#L128)) —
+  div.gallery_thumbnail` ([Gallery.astro:128-167](../../src/components/listing/Gallery.astro#L128)) —
   no `#gallery` id, no `.grid` class. Rules must re-point (table below).
 - **`color_palette: default`** for ryanilano → dark tiles come from theme CSS, not a palette; no
   collision with the `colorCss` block.
@@ -86,7 +86,7 @@ main). Selector-translated identity rules:
 Cleaned copy of `config-legacy/themes/ryanilano/options.yml` (grid mode, `display_size:false`,
 `display_file_extensions:false`, `display_file_names_in_gallery:false`, logo `.gif` path,
 `color_palette:default`). The logo/favicon paths 404 → existing empty-logo→text fallback in
-[Header.astro:74-87](../src/layouts/Header.astro#L74) (the "+assets" tier stays deferred).
+[Header.astro:74-87](../../src/layouts/Header.astro#L74) (the "+assets" tier stays deferred).
 `coerceLike` in site.ts tolerates any unknown values.
 
 ### 6. Gitignore the generated sheets
@@ -95,9 +95,9 @@ add a line if not). `theme-ryanilano.css` is generated, not committed — the `.
 
 ## Files
 
-- **Edit:** [scripts/gen-css.mjs](../scripts/gen-css.mjs) (themes loop),
-  [src/lib/site.ts](../src/lib/site.ts) (`export activeTheme`),
-  [src/layouts/Layout.astro](../src/layouts/Layout.astro) (conditional `<link>`).
+- **Edit:** [scripts/gen-css.mjs](../../scripts/gen-css.mjs) (themes loop),
+  [src/lib/site.ts](../../src/lib/site.ts) (`export activeTheme`),
+  [src/layouts/Layout.astro](../../src/layouts/Layout.astro) (conditional `<link>`).
 - **New (committed source):** `src/styles/themes/ryanilano.scss`,
   `config/themes/ryanilano/options.yml`.
 - **Maybe:** `.gitignore` (theme-*.css).

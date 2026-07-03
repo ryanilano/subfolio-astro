@@ -9,7 +9,7 @@ npm install      # Node 24 (see .nvmrc)
 npm run dev      # astro dev → browse the rendered listing/detail pages
 npm run build    # astro check (types) + astro build
 npm run preview  # serve the static build locally
-npm run deploy   # build + publish to Cloudflare (Wrangler, Workers static-assets)
+npm run deploy   # build + publish to Cloudflare Pages (wrangler pages deploy)
 ```
 
 Content is authored by dropping files into a content directory and naming them by convention (`-t-`/`-m-`/`-b-` embeds, `.link`/`.cut`/`.pop`/`.ftr`/`.slide`/`.site`/`.oplx`/`.rss` enhancers, `-hidden`, `-access`). A custom Astro content **loader** walks that directory at build time and interprets the conventions — this is the port of the old PHP engine (`Filebrowser.php` + `Subfolio.php`).
@@ -18,7 +18,7 @@ Content is authored by dropping files into a content directory and naming them b
 
 The loader reads `SUBFOLIO_CONTENT_DIR`, defaulting to the bundled `content/examples/` fixture so the repo runs standalone. Point it at a live Subfolio install's `directory/` to run against real content.
 
-Set it in `.env` (gitignored):
+Set it in `.env.content` (gitignored):
 
 ```sh
 SUBFOLIO_CONTENT_DIR=/path/to/subfolio/directory
@@ -32,7 +32,9 @@ Then run through `./dev-content.sh` instead of `npm` directly:
 ./dev-content.sh preview  # npm run preview
 ```
 
-The wrapper is needed because Astro only loads `.env` at render time — not at config time when the loader resolves the content dir — and the `gen-*` scripts read no dotfile at all. `dev-content.sh` promotes `SUBFOLIO_CONTENT_DIR` from `.env` to a real exported shell var so both see it. Plain `npm run dev` still works; it just falls back to `content/examples/`.
+The wrapper is needed because Astro only loads dotenv values at render time — not at config time when the loader resolves the content dir — and the `gen-*` scripts read no dotfile at all. `dev-content.sh` promotes `SUBFOLIO_CONTENT_DIR` from `.env.content` to a real exported shell var so both build phases see the same value. Plain `npm run dev` still works; it just falls back to `content/examples/`.
+
+> **Why `.env.content` and not `.env`?** Astro auto-loads `.env` at render time only. With the content dir in `.env`, a plain `npm run build` produced a split-brain build: pages came from the fixture while the `/directory/` raw-bytes route walked the live content tree — leaking the content repo's `.git/` into `dist/` and permanently failing two smoke tests. Keeping the value in a file Astro never reads means every build is internally consistent: plain `npm` commands = pure fixture, `./dev-content.sh` = pure live content.
 
 ## Layout
 

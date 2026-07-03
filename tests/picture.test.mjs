@@ -108,11 +108,12 @@ test("<img> fallback src is original-format thumbnail, not .webp or .avif", () =
 // --- (c) Originals under /directory/ stay PNG/JPEG -----------------------
 
 /**
- * Find the served original under dist/directory. The raw-bytes route serves
- * originals under the content-root basename prefix (e.g. `examples/`), while
- * the thumbnail cache mirrors the layout WITHOUT that prefix — so we can't
- * hardcode one path. Search the tree for the original `example.png` that is
- * NOT inside a `-thumbnails/` dir (those are derived previews).
+ * Find the served original under dist/directory. Content files and cache-
+ * derived files share the same /directory/<relPath> namespace (no prefix — an
+ * earlier `.env` split-brain build put originals under an `examples/` prefix;
+ * fixed, see README "Why .env.content"). Keep the search rather than a
+ * hardcoded path so the test tolerates layout changes; skip anything inside
+ * -thumbnails/ (those are derived previews, not originals).
  */
 function findOriginal(dir, want) {
   let entries;

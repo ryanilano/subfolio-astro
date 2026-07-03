@@ -8,7 +8,11 @@
  * copy step is needed — the same content the loader walks is served verbatim,
  * in both `astro dev` and `astro build` (static output).
  *
- * Deferred (Phase 4): -access enforcement. Everything served here is public.
+ * Deferred (Phase 4): -access enforcement. Everything served here is public —
+ * which is exactly why repo/OS metadata is filtered below: pointing the content
+ * root at a git checkout must never publish its .git/.github/.claude internals
+ * (this happened — see README "Why .env.content"). The CI strip in the archive
+ * deploy is the first line of defense; this filter is the engine-level one.
  */
 import type { APIRoute } from "astro";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -56,6 +60,30 @@ function mimeFor(name: string): string {
   return MIME[extname(name).toLowerCase()] ?? "application/octet-stream";
 }
 
+/**
+ * Names that must never be served, even when the content root is a live git
+ * checkout:
+ *
+ * - Any dot-prefixed entry (.git, .github, .forgejo, .claude, .gitignore,
+ *   .DS_Store, .env, …). Dot entries are repo/OS metadata, never Subfolio
+ *   content — Subfolio's own hidden convention is the "-" prefix, and those
+ *   ARE served on purpose (embeds, -thumbnails/, -t-* banner images).
+ * - `-access` (and its .txt variant): its allow/deny rules leak user and group
+ *   names, and enforcement is deferred to Phase 4. The PHP engine's htaccess
+ *   blocked config/users and *.yml for the same reason.
+ *
+ * Applied in walkFiles (nothing blocked becomes a static route) AND in GET
+ * (astro dev serves arbitrary paths live, so the walk-time filter alone is
+ * not enough there).
+ */
+function isBlockedName(name: string): boolean {
+  return name.startsWith(".") || name === "-access" || name === "-access.txt";
+}
+
+function isBlockedPath(relPath: string): boolean {
+  return relPath.split("/").some(isBlockedName);
+}
+
 /** Recursively collect every real file under `root`, "/"-relative. */
 function walkFiles(root: string, relDir: string, out: string[]): void {
   const absDir = join(root, relDir);
@@ -66,6 +94,7 @@ function walkFiles(root: string, relDir: string, out: string[]): void {
     return;
   }
   for (const name of entries) {
+    if (isBlockedName(name)) continue; // repo/OS metadata + -access: never served
     const relPath = relDir ? `${relDir}/${name}` : name;
     const abs = join(absDir, name);
     let isDir = false;
@@ -108,6 +137,12 @@ function safeResolve(root: string, relPath: string): string | null {
 
 export const GET: APIRoute = ({ params }) => {
   const relPath = params.path ?? "";
+  // Blocked names 403 before any disk access — mirrors the htaccess [F] rules.
+  // Matters in `astro dev`, where GET serves arbitrary live paths that never
+  // went through getStaticPaths' filtered walk.
+  if (isBlockedPath(relPath)) {
+    return new Response("Forbidden", { status: 403 });
+  }
   // Serve from content first, then the out-of-tree thumbnail cache. Both are
   // traversal-guarded; content wins if a path somehow exists in both.
   const absContent = safeResolve(contentRoot, relPath);

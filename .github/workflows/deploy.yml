@@ -27,6 +27,16 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Gate the deploy on the structural smoke suite + SEO head assertions.
+      # Both assert against the dist/ the Build step just produced (no rebuild).
+      # A green `astro build` does NOT prove a render (see AGENTS.md) — these
+      # tests encode the render anchors, so nothing red can ship.
+      - name: Test — smoke suite
+        run: npm run test
+
+      - name: Test — SEO head
+        run: npm run test:seo
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:

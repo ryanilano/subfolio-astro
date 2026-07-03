@@ -18,10 +18,33 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parse } from "yaml";
 import { page } from "./_dist.mjs";
 
-// Must match astro.config.mjs `site`.
-const SITE = "https://subfolio-astro.ilano.fyi";
+const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
+
+// Read expectations from the same sources the build reads, so a config change
+// (rebrand, domain move) can't silently diverge from a hardcoded test value —
+// this test gates the deploy (.github/workflows/deploy.yml).
+//
+// astro.config.mjs resolves `site` as SUBFOLIO_SITE_URL ?? "<default>" (the
+// archive deploy overrides it via env). Mirror that resolution exactly: honor
+// the env var if set, else parse the string default out of the config source.
+const SITE_DEFAULT = readFileSync(join(ROOT, "astro.config.mjs"), "utf8").match(
+  /SUBFOLIO_SITE_URL\s*\?\?\s*["']([^"']+)["']/,
+)?.[1];
+const SITE = (process.env.SUBFOLIO_SITE_URL ?? SITE_DEFAULT)?.replace(/\/+$/, "");
+const SITE_NAME = String(
+  parse(readFileSync(join(ROOT, "config/settings.yml"), "utf8"))?.site_name ?? "",
+);
+
+test("config sources resolve (site url + site name)", () => {
+  assert.ok(SITE, "could not read `site` from astro.config.mjs");
+  assert.ok(SITE_NAME, "could not read `site_name` from config/settings.yml");
+});
 
 /** Grab a meta/link tag's content/href by property|name|rel attribute value. */
 function attrContent(html, sel) {
@@ -38,8 +61,8 @@ test("root page has absolute canonical + og:url", () => {
   const html = page("/");
   assert.equal(attrContent(html, 'rel="canonical"'), `${SITE}/`);
   assert.equal(attrContent(html, 'property="og:url"'), `${SITE}/`);
-  assert.equal(attrContent(html, 'property="og:site_name"'), "Subfolio");
-  assert.equal(attrContent(html, 'property="og:title"'), "Subfolio");
+  assert.equal(attrContent(html, 'property="og:site_name"'), SITE_NAME);
+  assert.equal(attrContent(html, 'property="og:title"'), SITE_NAME);
 });
 
 // --- (b) og:type per route kind --------------------------------------------

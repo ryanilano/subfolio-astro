@@ -11,7 +11,9 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pageExists, page, distFile } from "./_dist.mjs";
+import { readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { pageExists, page, distFile, DIST } from "./_dist.mjs";
 
 // ── space-named routes ──────────────────────────────────────────────
 
@@ -57,4 +59,37 @@ test("/directory/<path> serves raw file bytes", () => {
   // Another fixture: the zip bundle for .oplx folders.
   const zip = distFile("directory/08_project_plan.oplx.zip");
   assert.ok(zip.length > 0, "raw .oplx.zip should be non-empty");
+});
+
+// ── raw-byte route: repo/OS metadata + -access are never served ─────
+
+test("dist/directory contains no dot-entries and no -access files", () => {
+  // Engine-level leak guard (src/pages/directory/[...path].ts isBlockedName):
+  // dot-prefixed entries (.git, .github, .claude, .DS_Store, …) and -access
+  // files must never reach the build, even when the content root is a live
+  // git checkout. The fixture ships 07_protecting_a_folder/-access, so this
+  // test fails if the walk-time filter is ever removed.
+  const offenders = [];
+  const walk = (dir) => {
+    let entries;
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const name of entries) {
+      const abs = join(dir, name);
+      if (name.startsWith(".") || name === "-access" || name === "-access.txt") {
+        offenders.push(abs);
+        continue;
+      }
+      if (statSync(abs).isDirectory()) walk(abs);
+    }
+  };
+  walk(join(DIST, "directory"));
+  assert.deepEqual(
+    offenders,
+    [],
+    `blocked names leaked into dist/directory: ${offenders.join(", ")}`
+  );
 });

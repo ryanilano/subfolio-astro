@@ -22,6 +22,8 @@ node_modules/
 # env
 .env
 .env.production
+# live-content config read ONLY by dev-content.sh (never by Astro — see that script)
+.env.content
 # logs
 npm-debug.log*
 # local-only scratch + Claude Code session logs (untracked, never pushed)

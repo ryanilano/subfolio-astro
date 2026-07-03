@@ -11,11 +11,15 @@ Guidance for Claude Code (claude.ai/code) working in this repo.
 ```sh
 npm install                  # Node 24 (.nvmrc)
 npm run dev                  # astro dev → rendered listing/detail pages
-npm run build                # astro check (types) + astro build
+npm run build                # gen-* pre-passes + astro check (types) + astro build
 npm run preview              # serve static build
+npm run test                 # structural smoke suite — asserts against dist/ (build first)
+npm run test:seo             # SEO/OG head assertions against dist/
+npm run test:a11y            # axe + contrast (Playwright; rebuilds)
+./dev-content.sh [build]     # run against LIVE content (reads .env.content — see README)
 ```
 
-No unit tests; validate by rendering pages (`npm run preview`) against the `content/examples/` fixture. (See AGENTS.md: a green build does not prove a render.)
+Tests assert against the static build — always `npm run build` before `npm run test`. CI gates the Cloudflare deploy on `test` + `test:seo` ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)). The suite is expected fully green; do NOT normalize a red test as "known-failing" — the two long-tolerated failures turned out to be a config trap that leaked the content repo's `.git` into `dist/` (see README "Why `.env.content`"). Tests are structural, not visual: still render-review per AGENTS.md (a green build does not prove a render).
 
 ## Architecture
 
@@ -48,7 +52,7 @@ Registered in [src/content.config.ts](src/content.config.ts) as collection `"fol
 Two URL namespaces mirroring the PHP engine (for diffing on the same content):
 
 - **HTML pages** — [src/pages/[...path].astro](src/pages/[...path].astro) ports `Filebrowser_Controller::index()`. `getStaticPaths()` resolves each entry to: **folder** listing ([Listing.astro](src/components/listing/Listing.astro) composes seven partials in PHP order), **file** detail (kind→component via [routing.ts](src/lib/routing.ts) `componentForKind`), **single** view (`.site`/`.oplx` folders), or meta-refresh **redirect** (`.slide` folders). Breadcrumb + prev/next derived in `routing.ts`.
-- **Raw bytes** — [src/pages/directory/[...path].ts](src/pages/directory/[...path].ts) serves contents under `/directory/<path>` (ports `get_file_url()`). All `<img src>`/download hrefs route through `routing.ts` `assetUrl()`. `-access` deferred (Phase 4) — everything served is public.
+- **Raw bytes** — [src/pages/directory/[...path].ts](src/pages/directory/[...path].ts) serves contents under `/directory/<path>` (ports `get_file_url()`). All `<img src>`/download hrefs route through `routing.ts` `assetUrl()`. Dot-prefixed entries (`.git`, `.DS_Store`, …) and `-access` files are blocked at walk time and 403'd in dev — repo/OS metadata must never be served even from a git-checkout content root. `-access` *enforcement* deferred (Phase 4) — everything else served is public.
 
 ### Fixture
 
@@ -61,4 +65,7 @@ Full details in [docs/ROADMAP.md](docs/ROADMAP.md). State:
 - **Phase 0** ✅ — Spec from PHP engine ([docs/spec/](docs/spec/))
 - **Phase 1** ✅ — Content loader
 - **Phase 2** ✅ — Theme components on real routes; `/debug` dropped
-- **Phase 3–5** — Build pipeline (sharp/RSS/sass), deferred auth, enhancer polish
+- **Phase 3** ✅ — Build pipeline (sharp/RSS/sass) + Cloudflare Pages deploy, **live** at <https://subfolio-astro.ilano.fyi> (GitHub Actions auto-deploy, test-gated)
+- **Phase 4** ⏸ — Auth Worker: deferred until access-gated folders are a real need
+- **Phase 5** ✅ — Enhancer polish (Markdown bodies, `.pop`, `.slide`, `.oplx` zips)
+- **Milestone 6** ✅ — Perf & build modernization ([docs/DEEPSEEK-TASKS-perf.md](docs/DEEPSEEK-TASKS-perf.md))

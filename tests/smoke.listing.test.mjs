@@ -85,26 +85,28 @@ test("03_featuring_content renders feature cards", () => {
 
 test("03_featuring_content excludes featured targets from plain listing", () => {
   const html = page("03_featuring_content");
-  // Featured file/folder in the same directory should disappear from the
-  // plain file listing. The page should show "No items in this directory"
-  // AND must NOT link to the featured items in the plain listing area.
+  // Every plain item in this fixture folder is featured away, so upstream
+  // have_files() is false and NO plain listing block renders at all.
   assert.ok(
-    html.includes("No items in this directory"),
-    "expected empty listing message when all items are featured"
-  );
-  // featured-file.txt and featured_folder should NOT appear as plain listing
-  // links (they appear only inside the features block above)
-  const listingBlock = html.slice(html.indexOf('<div class="listing">'));
-  const featuresBlock = html.slice(0, html.indexOf('<div class="listing">'));
-  assert.ok(
-    !listingBlock.includes("featured-file.txt"),
-    "featured-file.txt leaked into plain listing"
+    !html.includes('<div class="listing">'),
+    "plain listing block should not render when all items are featured"
   );
   assert.ok(
-    !listingBlock.includes("featured_folder"),
-    "featured_folder leaked into plain listing"
+    !html.includes('class="list__row'),
+    "no listing rows should render when all items are featured"
   );
-  // But they DO appear in the features block (above the listing)
+  // Upstream-parity guard: is_empty_folder() counts EVERY on-disk entry
+  // including hidden/.ftr files (file_or_folder_count(TRUE),
+  // Filebrowser.php:453), so a folder whose items are merely featured away is
+  // NOT 'empty' — the emptyfolder message must NOT appear here.
+  assert.ok(
+    !html.includes("No items in this directory"),
+    "emptyfolder message must not show for featured-away (non-empty) folders"
+  );
+  // The featured targets appear ONLY inside the features block.
+  const featuresStart = html.indexOf('id="features"');
+  assert.ok(featuresStart !== -1, "missing features container");
+  const featuresBlock = html.slice(featuresStart, html.indexOf("</main>"));
   assert.ok(
     featuresBlock.includes("featured-file.txt"),
     "featured-file.txt missing from features block"

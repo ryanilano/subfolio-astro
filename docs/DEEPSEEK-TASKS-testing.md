@@ -129,3 +129,13 @@ the cache layout or output contract.
 **Done when:** `npm run build` logs `[gen-rss] … 0 failed` for that feed (it fetches & caches),
 and the build still completes. Keep the graceful-fallback behavior for genuinely unreachable
 feeds.
+
+> **Shipped (2026-07-03):** strict-parse-first with a tolerant re-parse fallback
+> (`strict:false` + `normalizeTags` + lowercasing `attrNameProcessors`). Root cause: the
+> earlier lone `strict:false` made sax uppercase tag/attr names, so rss-parser threw
+> "not recognized" and the catch silently cached **zero items**. Tolerant mode stays a
+> *fallback* because non-strict lowercasing breaks RSS 1.0 (`rdf:RDF`). Verified
+> end-to-end against a locally served copy of the malformed pattern (mismatched close
+> tag): `1 fetched, 0 failed`, real items cached; unreachable-host path unchanged
+> (`1 failed` + empty-cache seed). Confirm against the live FeedBurner URL with one
+> local `npm run build`.

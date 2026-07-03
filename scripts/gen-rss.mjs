@@ -30,7 +30,20 @@ const cacheRoot = resolve(process.env.SUBFOLIO_RSS_CACHE ?? "./.rss-cache");
 const DEFAULT_COUNT = 10;
 const DEFAULT_CACHE_SECONDS = 3600;
 
-const parser = new Parser({ xml2js: { strict: false } });
+/** Strict parser first — exact spec behavior, keeps RSS 1.0 (`rdf:RDF`) working.
+ *  On an XML parse error (e.g. FeedBurner's "Unexpected close tag") we retry with
+ *  the tolerant parser: sax non-strict mode uppercases tag/attribute names, so
+ *  normalizeTags + a lowercasing attrNameProcessor restore the shape rss-parser
+ *  expects (`rss.$.version`).  NOTE: non-strict lowercasing breaks RSS 1.0's
+ *  `rdf:RDF` root — which is why tolerant is a fallback, never the first try. */
+const parser = new Parser();
+const tolerantParser = new Parser({
+  xml2js: {
+    strict: false,
+    normalizeTags: true,
+    attrNameProcessors: [(name) => name.toLowerCase()],
+  },
+});
 
 /** Shared cache-file path rule — MUST match src/lib/rssFeed.ts. */
 function cacheFileFor(feedurl) {
@@ -95,20 +108,29 @@ function readCache(file) {
  *  doesn't increment the "failed" counter.  Genuinely unreachable hosts still
  *  throw and surface as "failed" (the caller writes an empty cache if none exists). */
 async function fetchItems(feedurl, count) {
-  try {
-    const feed = await parser.parseURL(feedurl);
-    return (feed.items ?? []).slice(0, count).map((it) => ({
+  const normalize = (feed) =>
+    (feed.items ?? []).slice(0, count).map((it) => ({
       title: it.title ?? "",
       description: it.contentSnippet ?? it.content ?? it.summary ?? "",
       link: it.link ?? "",
     }));
+  try {
+    return normalize(await parser.parseURL(feedurl));
   } catch (err) {
-    // Tolerant parse succeeded at the XML level but the resulting tree isn't a
-    // recognised RSS/Atom format — the URL is reachable but no longer serves a
-    // feed (HTML landing page, redirect, etc.).  Return empty so the build logs
-    // 0 failed and the cache gets a valid (empty) entry.
+    // The tree parsed but isn't a recognised RSS/Atom format — the URL is
+    // reachable but no longer serves a feed (HTML landing page, redirect,
+    // etc.).  Return empty so the build logs 0 failed and the cache gets a
+    // valid (empty) entry.
     if (/not recognized/i.test(err.message)) return [];
-    throw err;
+    // Strict XML parse failed (malformed feed, e.g. mismatched close tags).
+    // Retry once with the tolerant parser before giving up; if THAT still
+    // isn't a recognisable feed, fall back to the empty-but-cached posture.
+    try {
+      return normalize(await tolerantParser.parseURL(feedurl));
+    } catch (err2) {
+      if (/not recognized/i.test(err2.message)) return [];
+      throw err2;
+    }
   }
 }
 

@@ -303,3 +303,8 @@ dropped) but the jQuery teardown was deliberately left out of scope (split+defer
 WebP/AVIF retina thumbnails (originals untouched), non-blocking deferred jQuery, and a full
 social/SEO head. Deliberately left: jQuery vanilla rewrite, View Transitions (flag wired, off),
 and Lighthouse scoring (measure-don't-block — no perf gate in CI).
+
+> **Addendum (2026-07-03):** the "2 known pre-existing failures" referenced in the phase notes
+> above (`/directory` bytes + markdown render) were fixed in PRs #14/#15 (`.env`→`.env.content`
+> wiring + corrected featured-listing assertion) — the smoke suite is expected fully green now;
+> don't treat those notes as current.

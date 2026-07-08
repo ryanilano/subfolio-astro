@@ -136,8 +136,15 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
           }
         }
 
-        // Apply .ftr exclusions to the plain listing.
-        const files = visibleFiles.filter((f) => !excluded.has(f.name));
+        // .ftr exclusions apply to the plain LISTING only — the listing view
+        // (buildListingItems) and the gallery honor `entry.excluded` at render
+        // time. Featured FILES must STAY in entry.files so their detail route is
+        // still generated ([...path].astro builds file routes from entry.files);
+        // dropping them here 404s any feature card that points at a file, since a
+        // file has no independent collection entry the way a folder does.
+        // Featured FOLDERS already route as their own entries, so keep them out of
+        // the parent's folder list to avoid duplicate sibling-nav.
+        const files = visibleFiles;
         const folders = visibleFolders.filter((f) => !excluded.has(f.name));
 
         const embeds = collectEmbeds(embedInputs, ctx);

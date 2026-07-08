@@ -1,3 +1,3 @@
-
-
-**Important note:** Enhancer files must be encoded as Unicode (UTF-8) for them to work properly. Enhancer files use YAML, a human friendly data serialization standard stored in plaintext files. Indentation, spacing and text case are super important. Learn more at "yaml.org":http://www.yaml.org.
+Want one of your own? The [Subfolio-Astro docs](https://ryanilano.github.io/subfolio-astro-docs/)
+walk through every convention and enhancer, start to finish. Source lives
+on [GitHub](https://github.com/ryanilano/subfolio-astro).

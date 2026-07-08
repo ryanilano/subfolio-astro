@@ -97,6 +97,10 @@ const faviconType = (faviconExt && FAVICON_MIME[faviconExt]) || "image/vnd.micro
 // Full page title: "Page Title — Site Title" or just "Site Title"
 const fullTitle = title ? `${title} — ${site_title}` : site_title;
 
+// Base-path prefix for hardcoded static-asset hrefs (fonts/css/js/favicon).
+// import.meta.env.BASE_URL always ends in "/" — never add a leading slash after it.
+const base = import.meta.env.BASE_URL;
+
 // --- Open Graph / Twitter Card -------------------------------------------
 // Absolute canonical URL for this page (Astro.site is set in astro.config).
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
@@ -275,13 +279,13 @@ const colorCss = `
 
   {site_favicon_url && (
     <>
-      <link rel="icon" href={`${site_favicon_url}?v=2`} type={faviconType} />
-      <link rel="shortcut icon" href={`${site_favicon_url}?v=2`} type={faviconType} />
+      <link rel="icon" href={`${base}${site_favicon_url.replace(/^\//, '')}?v=2`} type={faviconType} />
+      <link rel="shortcut icon" href={`${base}${site_favicon_url.replace(/^\//, '')}?v=2`} type={faviconType} />
     </>
   )}
 
-  <link rel="preload" href="/fonts/Inter-Variable-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link href="/css/main.css?v=2" type="text/css" rel="stylesheet" />
+  <link rel="preload" href={`${base}fonts/Inter-Variable-latin.woff2`} as="font" type="font/woff2" crossorigin />
+  <link href={`${base}css/main.css?v=2`} type="text/css" rel="stylesheet" />
   <script is:inline>
     var A17 = window.A17 || {};
     A17.svgSupport = document.implementation.hasFeature("http://www.w3.org/TR/SVG11/feature#BasicStructure", "1.1");
@@ -299,8 +303,8 @@ const colorCss = `
        (replaces the old JS A17.loadCSS). The browser fetches it at low priority
        as a print sheet, then onload flips it to all. <noscript> keeps it working
        with JS disabled. -->
-  <link rel="stylesheet" href="/css/icons.css" media="print" onload="this.media='all'" />
-  <noscript><link rel="stylesheet" href="/css/icons.css" /></noscript>
+  <link rel="stylesheet" href={`${base}css/icons.css`} media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href={`${base}css/icons.css`} /></noscript>
 
   <!-- Color palette (ported from template_colors.php). The CSS is built in
        frontmatter (colorCss) and emitted raw, because Astro <style> blocks are
@@ -310,7 +314,7 @@ const colorCss = `
   {/* Active-theme override sheet — last in <head> so it wins the cascade over
       both main.css and the inline color palette above. */}
   {hasThemeCss && (
-    <link href={`/css/theme-${activeTheme}.css?v=1`} type="text/css" rel="stylesheet" />
+    <link href={`${base}css/theme-${activeTheme}.css?v=1`} type="text/css" rel="stylesheet" />
   )}
 </head>
 
@@ -355,6 +359,6 @@ const colorCss = `
     </>
   )}
 
-  <script src="/js/main.js?v=2" defer is:inline></script>
+  <script src={`${base}js/main.js?v=2`} defer is:inline></script>
 </body>
 </html>

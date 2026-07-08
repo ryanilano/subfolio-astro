@@ -1,3 +1,1 @@
-Want one of your own? The [Subfolio-Astro docs](https://ryanilano.github.io/subfolio-astro-docs/)
-walk through every convention and enhancer, start to finish. Source lives
-on [GitHub](https://github.com/ryanilano/subfolio-astro).
+© 2026 Subfolio-Astro by [Ryan Ilano](https://github.com/ryanilano). An Astro port of [Subfolio](https://github.com/area17/subfolio) by [AREA17](https://area17.com), released under [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html) — [source](https://github.com/ryanilano/subfolio-astro).

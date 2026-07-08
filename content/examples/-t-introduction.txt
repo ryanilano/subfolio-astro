@@ -9,3 +9,7 @@ Everything here is the real example content, straight out of the box.
 Open any folder to see a convention at work: position embeds, enhancers,
 hidden items, slideshows, thumbnails — all driven by nothing more than
 how the files are named.
+
+Want one of your own? The [Subfolio-Astro docs](https://ryanilano.github.io/subfolio-astro-docs/)
+walk through every convention and enhancer, start to finish. Source lives
+on [GitHub](https://github.com/ryanilano/subfolio-astro).

@@ -25,11 +25,13 @@ test("root listing renders top intro embed text", () => {
 
 test("root listing renders bottom embed (-b-footer.txt)", () => {
   const html = page("");
-  // The -b-footer.txt embed renders inside id="inline_bottom_text"
+  // The -b-footer.txt embed renders inside id="inline_bottom_text" — now the
+  // AGPL-3.0 attribution/copyright line (the "Want one of your own" CTA moved up
+  // into the top intro embed).
   assert.ok(html.includes('id="inline_bottom_text"'), "missing inline_bottom_text container");
   assert.ok(
-    html.includes("Want one of your own"),
-    "root bottom embed missing -b-footer.txt content"
+    html.includes("AGPL-3.0"),
+    "root bottom embed missing AGPL-3.0 attribution"
   );
 });
 

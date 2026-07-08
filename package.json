@@ -3,6 +3,7 @@
   "type": "module",
   "version": "0.1.0",
   "description": "Subfolio reimagined as an Astro static site — a folder on disk becomes a themeable web gallery, no database, content authored by file-naming conventions.",
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "gen-thumbs": "node scripts/gen-thumbs.mjs",
     "gen-embeds": "node scripts/gen-embeds.mjs",

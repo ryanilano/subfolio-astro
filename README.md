@@ -43,3 +43,12 @@ The wrapper is needed because Astro only loads dotenv values at render time — 
 ## Layout
 
 - `src/loaders/` — the content loader (one module per concern; see `schema.ts` for the emitted entry shape). - `src/pages/[...path].astro` — catch-all that ports the PHP controller, resolving each entry to a folder/file/single/slide view. - `src/pages/directory/[...path].ts` — raw-bytes endpoint serving file contents under `/directory/<path>`. - `src/components/` — ported `default`-theme listing and per-filekind views. - `config/filekinds.yml` — extension → kind → view mapping (from upstream). - `content/examples/` — bundled fixture exercising every convention. - `docs/` — port plan and reference: [ROADMAP](docs/ROADMAP.md), the [deployment ADR](docs/ADR-deployment.md), and the stack-agnostic [behavior specs](docs/spec/) extracted from the original PHP engine.
+
+## License
+
+Subfolio-Astro is a modified derivative — an Astro port — of [Subfolio](https://github.com/area17/subfolio) by [AREA17](https://area17.com), and is distributed under the **same** license: the [GNU Affero General Public License v3.0](LICENSE) (`AGPL-3.0-or-later`).
+
+- Original Subfolio © AREA17.
+- Astro port © 2026 Ryan Ilano.
+
+Per the AGPL, the complete corresponding source for the deployed demo is this repository; the live demo footer links back to it.

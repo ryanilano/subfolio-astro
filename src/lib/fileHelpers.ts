@@ -246,6 +246,6 @@ export async function buildFileViewData(
     body: file.kind === "txt" ? renderText(safeReadText(absPath), ctx.renderer) : "",
     // .oplx download → the pre-built zip artifact (scripts/gen-oplx.mjs),
     // served under /directory/<folder>.zip. Other kinds don't use `archive`.
-    archive: file.kind === "oplx" ? assetUrl(`${ctx.relPath}.zip`) : `/${ctx.folderPath}`,
+    archive: file.kind === "oplx" ? assetUrl(`${ctx.relPath}.zip`) : `${import.meta.env.BASE_URL}${ctx.folderPath}`,
   };
 }

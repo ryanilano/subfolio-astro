@@ -48,8 +48,12 @@ interface Props {
 
 const { entry, listingMode = defaultOptions.listing_mode } = Astro.props;
 
-// Filter to image files only (mirrors SubfolioFiles::gallery_images)
-const imageFiles = entry.files.filter((f) => f.kind === "img");
+// Filter to image files only (mirrors SubfolioFiles::gallery_images), skipping
+// any featured away by a .ftr — featured targets stay in entry.files (so their
+// detail route builds) but must not also surface as plain gallery thumbnails.
+const imageFiles = entry.files.filter(
+  (f) => f.kind === "img" && !entry.excluded.includes(f.name),
+);
 
 // Build gallery image entries (mirrors SubfolioFiles::gallery_images loop)
 const thumbnailHeight = defaultOptions.thumbnail_height;

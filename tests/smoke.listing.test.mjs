@@ -9,7 +9,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { page } from "./_dist.mjs";
+import { page, pageExists } from "./_dist.mjs";
 
 // ── Root listing ──────────────────────────────────────────────────────
 
@@ -114,5 +114,20 @@ test("03_featuring_content excludes featured targets from plain listing", () => 
   assert.ok(
     featuresBlock.includes("featured_folder"),
     "featured_folder missing from features block"
+  );
+});
+
+test("03_featuring_content featured FILE keeps a built detail route (not 404)", () => {
+  // A .ftr featuring a file excludes it from the plain listing but MUST keep its
+  // detail page — clicking the feature card should open the file, not 404. (The
+  // loader keeps featured files in entry.files so [...path].astro still routes
+  // them; a featured FOLDER routes as its own entry.)
+  assert.ok(
+    pageExists("03_featuring_content/featured-file.txt"),
+    "featured-file.txt detail route missing — the feature-card link would 404"
+  );
+  assert.ok(
+    pageExists("03_featuring_content/featured_folder"),
+    "featured_folder route missing"
   );
 });

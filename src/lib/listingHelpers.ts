@@ -10,6 +10,7 @@ import { join } from "node:path";
 import type { FolderEntry, ChildFile, ChildFolder } from "../loaders/schema.ts";
 import type { Options } from "./site.ts";
 import { defaultOptions } from "./site.ts";
+import { pageUrl } from "./routing.ts";
 
 /** One row in the files-and-folders listing — mirrors the PHP $item array. */
 export interface ListingItem {
@@ -66,15 +67,20 @@ function iconForFolder(name: string): string {
   return "dir";
 }
 
-function urlForFolder(
-  folder: ChildFolder,
-  ctx: ListingContext,
-): string {
-  // .slide: link to first child file if slideTarget is set
+function urlForFolder(folder: ChildFolder): string {
+  // .slide with direct files → link straight to the redirect target (the first
+  // child's detail page), mirroring [...path].astro's `pageUrl(target)`.
+  // slideTarget is ALREADY the full root-relative path to that file, so pass it
+  // to pageUrl as-is — re-adding folder.name here produced the doubled path
+  // (`06 slideshow.slide/06 slideshow.slide/...`).
   if (folder.enhancerFolder === "slide" && folder.slideTarget) {
-    return `/${ctx.folderPath}${folder.name}/${folder.slideTarget}`;
+    return pageUrl(folder.slideTarget);
   }
-  return `/${ctx.folderPath}${folder.name}/`;
+  // folder.path is the folder's own root-relative path. Route through pageUrl so
+  // the base path + per-segment encoding are applied (was a raw
+  // `/${ctx.folderPath}${folder.name}/` that dropped the base and rendered
+  // `/./00_thumbnails/` at root — 404 under a non-root base).
+  return pageUrl(folder.path);
 }
 
 function urlForFile(
@@ -91,7 +97,13 @@ function urlForFile(
     }
     return "#";
   }
-  return `/${ctx.folderPath}${file.name}`;
+  // Internal detail-page link. ctx.folderPath is `${entry.path}/`; derive the
+  // parent's root-relative path ("" at root) and route through pageUrl so the
+  // base path + encoding are applied (was a raw `/${ctx.folderPath}${file.name}`
+  // → `/./file` at root — 404 under a non-root base).
+  const parent = ctx.folderPath.replace(/\/+$/, "");
+  const rel = parent === "" || parent === "." ? file.name : `${parent}/${file.name}`;
+  return pageUrl(rel);
 }
 
 function targetForItem(
@@ -150,7 +162,7 @@ export function buildListingItems(
     if (entry.excluded.includes(folder.name)) continue;
 
     const iconFile = iconForFolder(folder.name);
-    const url = urlForFolder(folder, ctx);
+    const url = urlForFolder(folder);
     const displayName = displayForItem({} as ChildFile, folder, opt);
 
     items.push({

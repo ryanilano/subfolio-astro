@@ -61,13 +61,13 @@ function encodePathParts(relPath: string): string {
  * raw-bytes prefix; every <img src>/download href routes through here.
  */
 export function assetUrl(relPath: string): string {
-  return `/directory/${encodePathParts(relPath)}`;
+  return `${import.meta.env.BASE_URL}directory/${encodePathParts(relPath)}`;
 }
 
 /** Detail/listing page URL for a "/"-relative content path. */
 export function pageUrl(relPath: string): string {
-  if (relPath === "" || relPath === ".") return "/";
-  return `/${encodePathParts(relPath)}`;
+  if (relPath === "" || relPath === ".") return import.meta.env.BASE_URL;
+  return `${import.meta.env.BASE_URL}${encodePathParts(relPath)}`;
 }
 
 export interface Crumb {

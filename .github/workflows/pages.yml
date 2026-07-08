@@ -1,0 +1,94 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    # Path-filtered (D4-06): only rebuild the demo when demo-relevant inputs
+    # change — content, source, theme CSS, the build config, or this workflow.
+    paths:
+      - 'content/examples/**'
+      - 'src/**'
+      - 'config/themes/**'
+      - 'astro.config.mjs'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+# Minimal scopes: this workflow never commits back, so contents stays
+# read-only at the top level. pages:write + id-token:write (required by the
+# native Actions Pages deploy/OIDC) are granted ONLY on the deploy job below.
+permissions:
+  contents: read
+
+jobs:
+  # Root-base test gate (RESEARCH Open Question 2 — RESOLVED: gate, at root
+  # base). tests/smoke.encoding.test.mjs + tests/seo.test.mjs assert
+  # root-absolute `/directory/<path>` links and `${SITE}/`-shaped canonical
+  # URLs, so they must run against a default build (SUBFOLIO_BASE_PATH unset
+  # → base "/"), NOT the base-prefixed Pages build — gating at root base keeps
+  # this project's "CI gates deploy" ethos (matches deploy.yml) without
+  # contaminating the tests with base-path assumptions.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (root base, for test assertions only)
+        run: npm run build
+
+      - name: Test — smoke suite
+        run: npm run test
+
+      - name: Test — SEO head
+        run: npm run test:seo
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout your repository using git
+        uses: actions/checkout@v6
+
+      - name: Install, build, and upload your site
+        # Official composite action: installs deps, runs the build, and
+        # uploads the Pages artifact WITH include-hidden-files:true — the
+        # exact flag that keeps dist/.nojekyll alive (Pitfall 3). Do not
+        # hand-roll upload-pages-artifact, and do not duplicate npm ci/npm run
+        # build steps here — this action does its own install+build.
+        uses: withastro/action@v6
+        env:
+          # Non-root base for the Pages project path — every internal URL
+          # builder (routing.ts, thumbnailPipeline.ts) and Layout/Header href
+          # is base-prefixed via import.meta.env.BASE_URL (see 04-01 plan).
+          SUBFOLIO_BASE_PATH: /subfolio-astro/
+          # Overrides the Cloudflare default so canonical/OG tags point at the
+          # github.io demo URL, not the Cloudflare production URL.
+          SUBFOLIO_SITE_URL: https://ryanilano.github.io
+          # D4-02/D4-04 client-content-leak guardrail: literal, auditable
+          # value — never a .env.content path, an absolute /Users/... path,
+          # or an interpolated variable. This build only ever sees the
+          # committed fixture.
+          SUBFOLIO_CONTENT_DIR: ./content/examples
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

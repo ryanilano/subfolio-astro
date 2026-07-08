@@ -29,7 +29,6 @@ export interface Props {
 }
 
 const {
-  site_root,
   site_domain,
   site_logo_url,
   site_logo_width,
@@ -51,6 +50,11 @@ const {
 const logoHeight = logoH ?? site_logo_height;
 const logoOffset = logoHeight > 0 ? logoHeight + 30 : 0;
 
+// The site root under a base path IS the base path — route the logo-link and
+// breadcrumb-root hrefs through BASE_URL directly rather than siteConfig.site_root
+// (which is deploy-agnostic "/" and unaware of the Pages base).
+const base = import.meta.env.BASE_URL;
+
 // HTML-escape helper for values interpolated into the raw dropdown string below.
 const esc = (v: string) =>
   v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -65,7 +69,7 @@ const dropdownHtml = [
     .reverse()
     .filter((crumb) => crumb.url !== "" && crumb.name !== "")
     .map((crumb) => `<a class="breadcrumb__folder" href="${esc(crumb.url)}">${esc(crumb.name)}</a>`),
-  `<a class="breadcrumb__root" href="${esc(site_root)}">${esc(site_domain)}</a>`,
+  `<a class="breadcrumb__root" href="${esc(base)}">${esc(site_domain)}</a>`,
   "</div>",
 ].join("\n        ");
 ---
@@ -75,10 +79,10 @@ const dropdownHtml = [
     {
       displayHeader && (
         <h1 id="logo">
-          <a href={site_root}>
+          <a href={base}>
             {
               site_logo_url
-                ? <img src={site_logo_url} width={site_logo_width} height={site_logo_height} alt={siteConfig.site_title} />
+                ? <img src={`${base}${site_logo_url.replace(/^\//, '')}`} width={site_logo_width} height={site_logo_height} alt={siteConfig.site_title} />
                 : siteConfig.site_title
             }
           </a>
@@ -92,7 +96,7 @@ const dropdownHtml = [
       displayBreadcrumb && (
         <nav aria-label="Breadcrumb" class="breadcrumb">
           {t("indexof") && <span class="breadcrumb__index">{t("indexof")}&nbsp;&nbsp;</span>}
-          <a class="breadcrumb__root" href={site_root}>{site_domain}</a>
+          <a class="breadcrumb__root" href={base}>{site_domain}</a>
           {breadcrumb.map((crumb) => (
             crumb.url !== "" && crumb.name !== ""
               ? <><span class="breadcrumb__slash">&nbsp;/&nbsp;</span><a class="breadcrumb__folder" href={crumb.url}>{crumb.name}</a></>

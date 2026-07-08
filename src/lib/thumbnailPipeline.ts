@@ -80,7 +80,7 @@ export async function thumbnailFor(
   // 1. Custom thumbnail (lives in the content tree, served verbatim — SPEC §3.5).
   const customDir = await customThumbDir(parentDir, name);
   if (customDir !== null) {
-    const url = `/directory/${encParent}${encodeURIComponent(customDir)}/${encodeURIComponent(name)}`;
+    const url = `${import.meta.env.BASE_URL}directory/${encParent}${encodeURIComponent(customDir)}/${encodeURIComponent(name)}`;
     const out: ThumbnailResult = { url, kind: "custom" };
     cache.set(relPath, out);
     return out;
@@ -92,7 +92,7 @@ export async function thumbnailFor(
   try {
     const st = await stat(resolve(cacheRoot, thumbRel));
     const rnd = Math.floor(st.ctimeMs);
-    const base = `/directory/${encParent}-thumbnails/${encodeURIComponent(name)}`;
+    const base = `${import.meta.env.BASE_URL}directory/${encParent}-thumbnails/${encodeURIComponent(name)}`;
     const url = `${base}?rnd=${rnd}`;
 
     // Modern-format siblings (Phase C). gen-thumbs.mjs writes `<name>.webp` /

@@ -15,10 +15,10 @@ import { page } from "./_dist.mjs";
 
 test("root listing renders top intro embed text", () => {
   const html = page("");
-  // The -t-intro-text.txt embed renders inside id="inline_top_text"
+  // The -t-introduction.txt embed renders inside id="inline_top_text"
   assert.ok(html.includes('id="inline_top_text"'), "missing inline_top_text container");
   assert.ok(
-    html.includes("Subfolio Enhancers"),
+    html.includes("Subfolio-Astro, Running Live"),
     "root top embed missing intro heading"
   );
 });
@@ -28,7 +28,7 @@ test("root listing renders bottom embed (-b-footer.txt)", () => {
   // The -b-footer.txt embed renders inside id="inline_bottom_text"
   assert.ok(html.includes('id="inline_bottom_text"'), "missing inline_bottom_text container");
   assert.ok(
-    html.includes("Important note"),
+    html.includes("Want one of your own"),
     "root bottom embed missing -b-footer.txt content"
   );
 });

@@ -1,8 +1,11 @@
-# Subfolio Enhancers
+# Subfolio-Astro, Running Live
 
-## Demo files
+Subfolio-Astro provides an elegant, practical and customizable web interface based on your file system. Point it at a folder of files and you get this — a polished, navigable
+site. No CMS, no database, no page-building. **The folders below *are* the site.**
 
-### Getting started with Subfolio enhancers
+Oh yeah, free fast and secure hosting is possible through CloudFlare and Github.
 
-Here is everything you need to take advantage of enhancers... just copy these files and customize. 
-
+Everything here is the real example content, straight out of the box.
+Open any folder to see a convention at work: position embeds, enhancers,
+hidden items, slideshows, thumbnails — all driven by nothing more than
+how the files are named.

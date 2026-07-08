@@ -320,6 +320,29 @@ const colorCss = `
 
 <body class={`${pageClass}`}>
   <a class="skip-link" href="#content">Skip to content</a>
+  {/* Persistent back-link banner (D4-07). ABSOLUTE cross-site URL — the docs
+      site sits on a DIFFERENT Pages base path, so a base-relative link can't
+      resolve across the two. Doubles as the "this is a live Subfolio demo"
+      marker. NB: the .slide meta-refresh redirect page bypasses this Layout —
+      accepted known gap (a near-instant redirect isn't a page users linger on). */}
+  <a class="demo-banner" href="https://ryanilano.github.io/subfolio-astro-docs/">
+    ← Docs &amp; source · <strong>live Subfolio-Astro demo</strong>
+  </a>
+  <style>
+    .demo-banner {
+      display: block;
+      padding: 0.5rem 1rem;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      background: rgba(0, 0, 0, 0.045);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    .demo-banner:hover { background: rgba(0, 0, 0, 0.075); }
+    .demo-banner strong { font-weight: 600; }
+  </style>
   <div id="container">
     <div id="container-inner">
       <Header

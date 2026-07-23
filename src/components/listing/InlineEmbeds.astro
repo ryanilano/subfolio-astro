@@ -15,6 +15,8 @@
 import { assetUrl } from "../../lib/routing.ts";
 import { rssItemsFor } from "../../lib/rssFeed.ts";
 import { renderText, type Renderer } from "../../lib/renderText.ts";
+import { imageMetaFor } from "../../lib/imageMeta.ts";
+import { embedVariantsFor } from "../../lib/embedVariants.ts";
 import type { Embed } from "../../loaders/schema.ts";
 
 interface Props {
@@ -27,6 +29,56 @@ const { embeds, position } = Astro.props;
 const textEmbeds = embeds.filter((e) => e.type === "txt");
 const imageEmbeds = embeds.filter((e) => e.type === "img");
 const rssEmbeds = embeds.filter((e) => e.type === "rss");
+
+/**
+ * Rendered display width of an embed, DERIVED from the stylesheet rather than
+ * guessed — a wrong `sizes` silently selects the wrong srcset rung.
+ *
+ * config/themes/default/css/main.scss: `#content { margin: $gutter }` = 30px,
+ * dropping to `$gutter-mobile` = 20px at the `small-and-down` breakpoint
+ * (max-width: 639px, config/themes/default/css/_variables.scss). Embed images are
+ * `max-width: 100%` of that column (`#inline_*_image img`). So the column is
+ * viewport minus twice the gutter.
+ *
+ * The ryanilano theme additionally caps `#container` at 1024px, making the real
+ * desktop column 964px; the default theme is fluid. We describe the FLUID case,
+ * which over-states width only on wide desktops — where both themes land on the
+ * top (1024w) rung regardless — and never under-selects.
+ */
+const EMBED_SIZES = "(max-width: 639px) calc(100vw - 40px), calc(100vw - 60px)";
+
+/**
+ * `sizes` is emitted ONLY when the srcset offers 2+ `w` candidates to choose
+ * between. With a single `w` candidate it cannot change WHICH file is picked,
+ * but it does make the browser report a density-corrected intrinsic width, which
+ * becomes the layout width wherever CSS lets the intrinsic size through.
+ * Single-candidate ladders are emitted bare (no descriptor) by embedVariantsFor,
+ * so this guard is belt-and-braces. Real embed ladders have multiple rungs and
+ * keep their `sizes`.
+ */
+function sizesFor(srcset: string): string | undefined {
+  return /\d+w(,|$)/.test(srcset) && srcset.includes(",") ? EMBED_SIZES : undefined;
+}
+
+// Resolve variants + intrinsic dimensions in frontmatter (both are build-time
+// cached); awaiting inside markup is not possible in Astro.
+const imageItems = await Promise.all(
+  imageEmbeds.map(async (image, i) => {
+    const meta = await imageMetaFor(image.src);
+    const variants = await embedVariantsFor(image.src, meta.width);
+    return {
+      src: image.src,
+      hasWebp: image.hasWebp,
+      width: meta.width > 0 ? meta.width : undefined,
+      height: meta.height > 0 ? meta.height : undefined,
+      avifSrcset: variants.avifSrcset,
+      webpSrcset: variants.webpSrcset,
+      // LCP hint: the first image of the TOP embed group is the largest
+      // above-the-fold paint on a project listing. It must not be lazy.
+      isLcp: position === "top" && i === 0,
+    };
+  }),
+);
 ---
 
 {
@@ -42,14 +94,38 @@ const rssEmbeds = embeds.filter((e) => e.type === "rss");
 {
   imageEmbeds.length > 0 && (
     <div id={`inline_${position}_image`}>
-      {imageEmbeds.map((image) =>
+      {imageItems.map((image) =>
         image.hasWebp ? (
           <picture>
-            <source type="image/webp" srcset={assetUrl(image.src + ".webp")} />
-            <img src={assetUrl(image.src)} alt="" />
+            {/* AVIF first — browsers take the first supported match. */}
+            {image.avifSrcset && (
+              <source type="image/avif" srcset={image.avifSrcset} sizes={sizesFor(image.avifSrcset)} />
+            )}
+            {image.webpSrcset ? (
+              <source type="image/webp" srcset={image.webpSrcset} sizes={sizesFor(image.webpSrcset)} />
+            ) : (
+              <source type="image/webp" srcset={assetUrl(image.src + ".webp")} />
+            )}
+            <img
+              src={assetUrl(image.src)}
+              width={image.width}
+              height={image.height}
+              loading={image.isLcp ? undefined : "lazy"}
+              fetchpriority={image.isLcp ? "high" : undefined}
+              decoding={image.isLcp ? undefined : "async"}
+              alt=""
+            />
           </picture>
         ) : (
-          <img src={assetUrl(image.src)} alt="" />
+          <img
+            src={assetUrl(image.src)}
+            width={image.width}
+            height={image.height}
+            loading={image.isLcp ? undefined : "lazy"}
+            fetchpriority={image.isLcp ? "high" : undefined}
+            decoding={image.isLcp ? undefined : "async"}
+            alt=""
+          />
         )
       )}
       <div class="clear"><!-- --></div>

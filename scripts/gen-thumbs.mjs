@@ -21,7 +21,7 @@
  * Mirrors FileFolder::get_thumbnail_url() generation rules (SPEC-thumbnails §3).
  */
 import sharp from "sharp";
-import { readdirSync, statSync, mkdirSync } from "node:fs";
+import { readdirSync, statSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { resolve, join, dirname, basename } from "node:path";
 import { loadSettings } from "../src/loaders/settings.ts";
 import { asNumber } from "../src/loaders/yaml.ts";
@@ -131,6 +131,54 @@ function isStale(absOut, srcStat) {
   }
 }
 
+/**
+ * Encode / refresh one format's ladder for a single source, then DROP any rung
+ * that is byte-dominated: encoded size >= the size of a WIDER rung of the same
+ * format. Such a rung is strictly worse on both axes — a narrower image for more
+ * bytes — so serving it makes narrow viewports pay extra for less.
+ *
+ * Stale rungs are encoded to a BUFFER first so a dominated one is never written
+ * at all; a rung already on disk that becomes dominated is removed. Fresh rungs
+ * keep their bytes untouched — the mtime staleness contract is intact.
+ *
+ * Mirrors the identical pass in scripts/gen-embeds.mjs (these two generators
+ * deliberately stay standalone). `rungs` is [{ w, absOut, encode }] where
+ * `encode` returns a sharp pipeline. Returns the number of files written.
+ */
+async function writeLadder(relPath, fmt, rungs, srcStat) {
+  const resolved = await Promise.all(
+    rungs.map(async (r) => {
+      if (!isStale(r.absOut, srcStat)) {
+        return { ...r, size: statSync(r.absOut).size, buf: null };
+      }
+      const buf = await r.encode().toBuffer();
+      return { ...r, size: buf.length, buf };
+    }),
+  );
+  resolved.sort((a, b) => a.w - b.w);
+
+  let written = 0;
+  // Walk widest → narrowest, tracking the smallest byte size seen so far among
+  // WIDER rungs. Any rung at or above that is dominated.
+  let smallestWider = Infinity;
+  for (let i = resolved.length - 1; i >= 0; i--) {
+    const r = resolved[i];
+    if (r.size >= smallestWider) {
+      console.log(
+        `[gen-thumbs] pruned ${relPath}.${r.w}w.${fmt} (${r.size} B ≥ a wider rung's ${smallestWider} B)`,
+      );
+      if (r.buf === null) rmSync(r.absOut, { force: true });
+      continue;
+    }
+    smallestWider = Math.min(smallestWider, r.size);
+    if (r.buf !== null) {
+      writeFileSync(r.absOut, r.buf);
+      written++;
+    }
+  }
+  return written;
+}
+
 /** Generate one thumbnail into the cache. Returns "created" | "fresh" | "skip". */
 async function genOne(relPath) {
   const parent = dirname(relPath);
@@ -216,30 +264,35 @@ async function genCustomOne(relPath) {
   const fitting = CUSTOM_LADDER_WIDTHS.filter((w) => w <= srcWidth);
   const widths = fitting.length > 0 ? fitting : [srcWidth];
 
-  const jobs = [];
-  for (const w of widths) {
-    const resizeOpts = { width: w, withoutEnlargement: true };
-    const absWebp = join(cacheRoot, `${relPath}.${w}w.webp`);
-    const absAvif = join(cacheRoot, `${relPath}.${w}w.avif`);
-    if (isStale(absWebp, srcStat)) {
-      jobs.push([
-        absWebp,
-        () => sharp(absSource).resize(resizeOpts).webp({ quality: CUSTOM_WEBP_QUALITY }),
-      ]);
-    }
-    if (isStale(absAvif, srcStat)) {
-      jobs.push([
-        absAvif,
-        () => sharp(absSource).resize(resizeOpts).avif({ quality: CUSTOM_AVIF_QUALITY }),
-      ]);
-    }
-  }
+  const ladder = {
+    webp: widths.map((w) => ({
+      w,
+      absOut: join(cacheRoot, `${relPath}.${w}w.webp`),
+      encode: () =>
+        sharp(absSource)
+          .resize({ width: w, withoutEnlargement: true })
+          .webp({ quality: CUSTOM_WEBP_QUALITY }),
+    })),
+    avif: widths.map((w) => ({
+      w,
+      absOut: join(cacheRoot, `${relPath}.${w}w.avif`),
+      encode: () =>
+        sharp(absSource)
+          .resize({ width: w, withoutEnlargement: true })
+          .avif({ quality: CUSTOM_AVIF_QUALITY }),
+    })),
+  };
 
-  if (jobs.length === 0) return "fresh";
-
+  // writeLadder always runs, even on a fully warm cache: it encodes nothing for
+  // fresh rungs (one statSync each), and it is what removes a rung that a newer
+  // encode has made byte-dominated. Gating it on staleness would leave such a
+  // rung on disk forever.
   mkdirSync(dirname(join(cacheRoot, relPath)), { recursive: true, mode: 0o755 });
-  await Promise.all(jobs.map(([absOut, make]) => make().toFile(absOut)));
-  return "created";
+  const written = await Promise.all([
+    writeLadder(relPath, "webp", ladder.webp, srcStat),
+    writeLadder(relPath, "avif", ladder.avif, srcStat),
+  ]);
+  return written.some((n) => n > 0) ? "created" : "fresh";
 }
 
 async function main() {

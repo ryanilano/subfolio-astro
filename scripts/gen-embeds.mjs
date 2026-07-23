@@ -32,7 +32,7 @@
  * whether InlineEmbeds renders a <picture> at all.
  */
 import sharp from "sharp";
-import { readdirSync, statSync, mkdirSync } from "node:fs";
+import { readdirSync, statSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { resolve, join, dirname } from "node:path";
 import { positionOf } from "../src/loaders/conventions.ts";
 
@@ -108,6 +108,54 @@ function ladderFor(srcWidth) {
   return fitting.length > 0 ? fitting : [srcWidth];
 }
 
+/**
+ * Encode / refresh one format's ladder for a single source, then DROP any rung
+ * that is byte-dominated: encoded size >= the size of a WIDER rung of the same
+ * format. Such a rung is strictly worse on both axes — a narrower image for more
+ * bytes — so serving it makes mobile pay extra for less. (Real case:
+ * `-t-01-darko.png.768w.avif` came out larger than its own 1024w sibling.)
+ *
+ * Stale rungs are encoded to a BUFFER first so a dominated one is never written
+ * at all; a rung already on disk that becomes dominated is removed. Rungs that
+ * are fresh keep their bytes untouched — the mtime staleness contract is intact.
+ *
+ * `rungs` is [{ w, absOut, encode }] where `encode` returns a sharp pipeline.
+ * Returns the number of files written.
+ */
+async function writeLadder(label, relPath, fmt, rungs, srcStat) {
+  const resolved = await Promise.all(
+    rungs.map(async (r) => {
+      if (!isStale(r.absOut, srcStat)) {
+        return { ...r, size: statSync(r.absOut).size, buf: null };
+      }
+      const buf = await r.encode().toBuffer();
+      return { ...r, size: buf.length, buf };
+    }),
+  );
+  resolved.sort((a, b) => a.w - b.w);
+
+  let written = 0;
+  // Walk widest → narrowest, tracking the smallest byte size seen so far among
+  // WIDER rungs. Any rung at or above that is dominated.
+  let smallestWider = Infinity;
+  for (let i = resolved.length - 1; i >= 0; i--) {
+    const r = resolved[i];
+    if (r.size >= smallestWider) {
+      console.log(
+        `[${label}] pruned ${relPath}.${r.w}w.${fmt} (${r.size} B ≥ a wider rung's ${smallestWider} B)`,
+      );
+      if (r.buf === null) rmSync(r.absOut, { force: true });
+      continue;
+    }
+    smallestWider = Math.min(smallestWider, r.size);
+    if (r.buf !== null) {
+      writeFileSync(r.absOut, r.buf);
+      written++;
+    }
+  }
+  return written;
+}
+
 /** Generate one embed's cache outputs. Returns "created" | "fresh" | "skip". */
 async function genOne(relPath) {
   const absSource = join(contentRoot, relPath);
@@ -138,32 +186,37 @@ async function genOne(relPath) {
   // would emit a duplicate of the native-width encode under a lying `w`
   // descriptor. If the source is narrower than every rung, fall back to a single
   // native-width rung so even small embeds still get an AVIF candidate.
-  for (const w of ladderFor(srcWidth)) {
-    const resizeOpts = { width: w, withoutEnlargement: true };
-    const absLadderWebp = join(cacheRoot, `${relPath}.${w}w.webp`);
-    const absLadderAvif = join(cacheRoot, `${relPath}.${w}w.avif`);
-    if (isStale(absLadderWebp, srcStat)) {
-      jobs.push([
-        absLadderWebp,
-        () =>
-          sharp(absSource)
-            .resize(resizeOpts)
-            .webp({ quality: LADDER_WEBP_QUALITY, effort: WEBP_EFFORT }),
-      ]);
-    }
-    if (isStale(absLadderAvif, srcStat)) {
-      jobs.push([
-        absLadderAvif,
-        () => sharp(absSource).resize(resizeOpts).avif({ quality: LADDER_AVIF_QUALITY }),
-      ]);
-    }
-  }
+  const widths = ladderFor(srcWidth);
+  const ladder = {
+    webp: widths.map((w) => ({
+      w,
+      absOut: join(cacheRoot, `${relPath}.${w}w.webp`),
+      encode: () =>
+        sharp(absSource)
+          .resize({ width: w, withoutEnlargement: true })
+          .webp({ quality: LADDER_WEBP_QUALITY, effort: WEBP_EFFORT }),
+    })),
+    avif: widths.map((w) => ({
+      w,
+      absOut: join(cacheRoot, `${relPath}.${w}w.avif`),
+      encode: () =>
+        sharp(absSource)
+          .resize({ width: w, withoutEnlargement: true })
+          .avif({ quality: LADDER_AVIF_QUALITY }),
+    })),
+  };
 
-  if (jobs.length === 0) return "fresh";
-
+  // writeLadder always runs, even on a fully warm cache: it encodes nothing for
+  // fresh rungs (one statSync each), and it is what removes a rung that a newer
+  // encode has made byte-dominated. Gating it on staleness would leave such a
+  // rung on disk forever.
   mkdirSync(dirname(absWebp), { recursive: true, mode: 0o755 });
-  await Promise.all(jobs.map(([absOut, make]) => make().toFile(absOut)));
-  return "created";
+  const [, ...ladderWritten] = await Promise.all([
+    Promise.all(jobs.map(([absOut, make]) => make().toFile(absOut))),
+    writeLadder("gen-embeds", relPath, "webp", ladder.webp, srcStat),
+    writeLadder("gen-embeds", relPath, "avif", ladder.avif, srcStat),
+  ]);
+  return jobs.length > 0 || ladderWritten.some((n) => n > 0) ? "created" : "fresh";
 }
 
 async function main() {

@@ -47,6 +47,19 @@ const rssEmbeds = embeds.filter((e) => e.type === "rss");
  */
 const EMBED_SIZES = "(max-width: 639px) calc(100vw - 40px), calc(100vw - 60px)";
 
+/**
+ * `sizes` is emitted ONLY when the srcset offers 2+ `w` candidates to choose
+ * between. With a single `w` candidate it cannot change WHICH file is picked,
+ * but it does make the browser report a density-corrected intrinsic width, which
+ * becomes the layout width wherever CSS lets the intrinsic size through.
+ * Single-candidate ladders are emitted bare (no descriptor) by embedVariantsFor,
+ * so this guard is belt-and-braces. Real embed ladders have multiple rungs and
+ * keep their `sizes`.
+ */
+function sizesFor(srcset: string): string | undefined {
+  return /\d+w(,|$)/.test(srcset) && srcset.includes(",") ? EMBED_SIZES : undefined;
+}
+
 // Resolve variants + intrinsic dimensions in frontmatter (both are build-time
 // cached); awaiting inside markup is not possible in Astro.
 const imageItems = await Promise.all(
@@ -86,10 +99,10 @@ const imageItems = await Promise.all(
           <picture>
             {/* AVIF first — browsers take the first supported match. */}
             {image.avifSrcset && (
-              <source type="image/avif" srcset={image.avifSrcset} sizes={EMBED_SIZES} />
+              <source type="image/avif" srcset={image.avifSrcset} sizes={sizesFor(image.avifSrcset)} />
             )}
             {image.webpSrcset ? (
-              <source type="image/webp" srcset={image.webpSrcset} sizes={EMBED_SIZES} />
+              <source type="image/webp" srcset={image.webpSrcset} sizes={sizesFor(image.webpSrcset)} />
             ) : (
               <source type="image/webp" srcset={assetUrl(image.src + ".webp")} />
             )}

@@ -93,7 +93,18 @@ async function customThumbSources(
   const out: { avif?: string; webp?: string } = {};
   for (const fmt of ["avif", "webp"] as const) {
     const rungs = byFormat[fmt].sort((a, b) => a.w - b.w);
-    if (rungs.length > 0) out[fmt] = rungs.map((r) => `${r.url} ${r.w}w`).join(", ");
+    if (rungs.length === 0) continue;
+    // A LONE candidate is emitted as a BARE URL with no `w` descriptor. With a
+    // `w` descriptor present the browser derives a density-corrected intrinsic
+    // size from `sizes` instead of the file's real pixel width, and since
+    // _gallery.scss sets `img { width: auto }` — which beats the presentational
+    // `width` attribute — that corrected width becomes the layout width and
+    // upscales the thumbnail. There is nothing to choose between with one
+    // candidate, so the descriptor buys nothing and costs a regression.
+    out[fmt] =
+      rungs.length === 1
+        ? rungs[0].url
+        : rungs.map((r) => `${r.url} ${r.w}w`).join(", ");
   }
   return out.avif || out.webp ? out : undefined;
 }

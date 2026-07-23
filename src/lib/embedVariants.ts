@@ -43,6 +43,21 @@ const EMPTY: EmbedVariants = { avifSrcset: "", webpSrcset: "" };
 // Build-time cache: a given embed is probed once per build.
 const cache = new Map<string, EmbedVariants>();
 
+/**
+ * Join ladder rungs into a `srcset` value.
+ *
+ * A LONE candidate is emitted as a BARE URL with no `w` descriptor. With a `w`
+ * descriptor present the browser derives a density-corrected intrinsic size from
+ * `sizes` rather than from the file's real pixel width, which can change layout
+ * wherever CSS lets the intrinsic size through. There is nothing to choose
+ * between with one candidate, so the descriptor buys nothing.
+ */
+function joinCandidates(rungs: { url: string; w: number }[]): string {
+  if (rungs.length === 0) return "";
+  if (rungs.length === 1) return rungs[0].url;
+  return rungs.map((r) => `${r.url} ${r.w}w`).join(", ");
+}
+
 /** Does `<relPath>.<w>w.<fmt>` exist in the embed cache? */
 async function rungExists(relPath: string, w: number, fmt: string): Promise<boolean> {
   try {
@@ -73,24 +88,24 @@ export async function embedVariantsFor(
     (a, b) => a - b,
   );
 
-  const avif: string[] = [];
-  const webp: string[] = [];
+  const avif: { url: string; w: number }[] = [];
+  const webp: { url: string; w: number }[] = [];
   for (const w of widths) {
     // The `w` descriptor must be the REAL encoded pixel width — gen-embeds names
     // each file after the width it actually resized to, so the filename is the
     // source of truth here.
     if (await rungExists(relPath, w, "avif")) {
-      avif.push(`${assetUrl(`${relPath}.${w}w.avif`)} ${w}w`);
+      avif.push({ url: assetUrl(`${relPath}.${w}w.avif`), w });
     }
     if (await rungExists(relPath, w, "webp")) {
-      webp.push(`${assetUrl(`${relPath}.${w}w.webp`)} ${w}w`);
+      webp.push({ url: assetUrl(`${relPath}.${w}w.webp`), w });
     }
   }
 
   const out: EmbedVariants =
     avif.length === 0 && webp.length === 0
       ? EMPTY
-      : { avifSrcset: avif.join(", "), webpSrcset: webp.join(", ") };
+      : { avifSrcset: joinCandidates(avif), webpSrcset: joinCandidates(webp) };
   cache.set(key, out);
   return out;
 }

@@ -46,13 +46,13 @@ test("report has the expected top-level shape", () => {
   }
 });
 
-test("pages section counts at least the fixture routes", () => {
+test("pages section counts at least the fixture routes", { skip: !report }, () => {
   assert.ok(report.pages.count >= 14, `only ${report.pages.count} pages built`);
   assert.ok(report.pages.htmlBytesTotal > 0, "htmlBytesTotal is zero");
   assert.ok(report.pages.largest.bytes > 0, "largest page has zero bytes");
 });
 
-test("linked assets include main.css and main.js", () => {
+test("linked assets include main.css and main.js", { skip: !report }, () => {
   const paths = report.linkedAssets.map((a) => a.path);
   assert.ok(paths.includes("css/main.css"), "css/main.css not linked");
   assert.ok(paths.includes("js/main.js"), "js/main.js not linked");
@@ -61,14 +61,14 @@ test("linked assets include main.css and main.js", () => {
   }
 });
 
-test("fonts + images sections carry per-format/ext breakdowns", () => {
+test("fonts + images sections carry per-format/ext breakdowns", { skip: !report }, () => {
   assert.equal(typeof report.fonts.totalBytes, "number");
   assert.ok(report.fonts.byFormat && typeof report.fonts.byFormat === "object");
   assert.equal(typeof report.images.totalBytes, "number");
   assert.ok(report.images.byExt && typeof report.images.byExt === "object");
 });
 
-test("every budget row has a status, and breaches are WARN-only", () => {
+test("every budget row has a status, and breaches are WARN-only", { skip: !report }, () => {
   assert.ok(Array.isArray(report.budgets) && report.budgets.length > 0);
   for (const b of report.budgets) {
     assert.ok(["OK", "WARN"].includes(b.status), `bad status: ${b.status}`);

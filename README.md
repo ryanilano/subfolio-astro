@@ -44,6 +44,12 @@ The wrapper is needed because Astro only loads dotenv values at render time — 
 
 - `src/loaders/` — the content loader (one module per concern; see `schema.ts` for the emitted entry shape). - `src/pages/[...path].astro` — catch-all that ports the PHP controller, resolving each entry to a folder/file/single/slide view. - `src/pages/directory/[...path].ts` — raw-bytes endpoint serving file contents under `/directory/<path>`. - `src/components/` — ported `default`-theme listing and per-filekind views. - `config/filekinds.yml` — extension → kind → view mapping (from upstream). - `content/examples/` — bundled fixture exercising every convention. - `docs/` — port plan and reference: [ROADMAP](docs/ROADMAP.md), the [deployment ADR](docs/ADR-deployment.md), and the stack-agnostic [behavior specs](docs/spec/) extracted from the original PHP engine.
 
+## Upstream reference
+
+This port is based on [`area17/subfolio`](https://github.com/area17/subfolio) at commit [`ec8889e`](https://github.com/area17/subfolio/commit/ec8889e670d5da07159a2e5841e80f964248e610) (16 April 2021), which is the current `master` HEAD and the last commit the project received.
+
+Every claim this repository and its [docs](https://ryanilano.github.io/subfolio-astro-docs/) make about the original — file paths, line references, config values, behaviour — refers to that commit. Pinning it means those claims stay checkable even if upstream changes.
+
 ## License
 
 Subfolio-Astro is a modified derivative — an Astro port — of [Subfolio](https://github.com/area17/subfolio) by [AREA17](https://area17.com), and is distributed under the **same** license: the [GNU Affero General Public License v3.0](LICENSE) (`AGPL-3.0-or-later`).

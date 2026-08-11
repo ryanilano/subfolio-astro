@@ -76,14 +76,14 @@ ase:
 ### AUDIO/VIDEO FILE KINDS
 
 snd:
-  extensions: [mp3, wav]
+  extensions: [mp3, wav, m4a, aac, aif, aiff, flac, ogg, oga, opus, weba]
   icon: snd
   display: Audio File
   instructions:>
     Audio files play in the browser. No plugin or player is needed.
 
 vid:
-  extensions: [avi, mov, mp4, mpg, mpeg, wmv, flv]
+  extensions: [avi, mov, mp4, m4v, webm, ogv, mpg, mpeg, wmv, flv]
   icon: vid
   display: Movie File
   instructions:>

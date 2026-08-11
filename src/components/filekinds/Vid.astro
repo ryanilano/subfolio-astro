@@ -1,9 +1,11 @@
 ---
 /**
- * Video filekind view — ported from upstream pages/filekinds/vid.php.
+ * Video filekind view, ported from upstream pages/filekinds/vid.php.
  *
- * Renders a QuickTime <EMBED> element for video files, plus the
- * hideable download box when display_info is enabled.
+ * Same correction as Snd.astro: the QuickTime <EMBED> the port carried over
+ * plays nothing in any current browser, and Safari on iPadOS never supported
+ * plugins at all. A real <video> element replaces it, so this no longer diffs
+ * byte for byte against the PHP original.
  *
  * Wave C1 component.
  */
@@ -17,22 +19,21 @@ interface Props {
 
 const f = Astro.props.file;
 
-// Legacy QuickTime <embed> attributes aren't part of the typed HTML
-// attribute set, so spread an untyped record to keep output identical
-// to the PHP original without tripping astro check.
-const embedAttrs: Record<string, unknown> = {
-  src: f.url,
-  autoplay: f.autoplay || "false",
-  pluginspage: "http://public.apple.com/quicktime/",
-  width: f.width,
-  height: f.height,
-  scale: "noscale",
-  controller: "true",
-};
+// autoplay arrives from the file record as a string, empty when unset.
+const shouldAutoplay = f.autoplay === "true" || f.autoplay === "1";
 ---
 
-<div role="img" aria-label={`Video: ${f.displayName}`}>
-  <embed {...embedAttrs} />
+<div>
+  <video
+    src={f.url}
+    controls
+    playsinline
+    preload="metadata"
+    width={f.width || undefined}
+    height={f.height || undefined}
+    autoplay={shouldAutoplay || undefined}
+    muted={shouldAutoplay || undefined}
+    aria-label={`Video: ${f.displayName}`}></video>
 </div>
 
 {defaultOptions.display_info ? <HideableDownloadBox file={f} /> : null}

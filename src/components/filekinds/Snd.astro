@@ -1,10 +1,13 @@
 ---
 /**
- * Sound filekind view — ported from upstream pages/filekinds/snd.php.
+ * Sound filekind view, ported from upstream pages/filekinds/snd.php.
  *
- * Renders an <embed> element for audio playback (QuickTime-era markup
- * preserved for visual diffing) and conditionally shows the hideable
- * download box when display_info is enabled.
+ * The port reproduced the PHP file's QuickTime <embed> markup so the two could
+ * be diffed visually. That markup does not play. NPAPI plugins were removed
+ * from every current browser, and Safari on iPadOS never supported them at
+ * all, so <embed> audio is silent on iPhone and iPad and dead everywhere else.
+ * A real <audio> element is the only thing that produces sound, so pixel
+ * parity with the original gives way here.
  */
 import { defaultOptions } from "../../lib/site.ts";
 import HideableDownloadBox from "./HideableDownloadBox.astro";
@@ -16,22 +19,26 @@ interface Props {
 
 const f = Astro.props.file;
 
-// Legacy QuickTime <embed> attributes aren't part of the typed HTML
-// attribute set, so spread an untyped record to keep output identical
-// to the PHP original without tripping astro check.
-const embedAttrs: Record<string, unknown> = {
-  src: f.url,
-  autoplay: f.autoplay,
-  controller: "true",
-  pluginspage: "http://public.apple.com/quicktime/",
-  width: f.width,
-  height: f.height,
-  scale: "noscale",
-};
+// autoplay arrives from the file record as a string, empty when unset. iOS
+// refuses unmuted autoplay whatever the markup says, so this is a hint the
+// browser is free to ignore rather than something playback depends on.
+const shouldAutoplay = f.autoplay === "true" || f.autoplay === "1";
+
+// The legacy markup carried explicit pixel dimensions. Height means nothing to
+// a native audio element, so only the width survives the port.
+const style = f.width
+  ? `width: ${f.width}px; max-width: 100%;`
+  : "max-width: 100%;";
 ---
 
-<div role="img" aria-label={`Audio: ${f.displayName}`}>
-  <embed {...embedAttrs} />
+<div>
+  <audio
+    src={f.url}
+    controls
+    preload="metadata"
+    autoplay={shouldAutoplay || undefined}
+    aria-label={`Audio: ${f.displayName}`}
+    style={style}></audio>
 </div>
 
 {defaultOptions.display_info && <HideableDownloadBox file={f} />}

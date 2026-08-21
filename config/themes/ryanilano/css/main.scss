@@ -93,6 +93,15 @@ body {
 #features ul li a:hover {
   background-color: #f5f5f5;
 }
+/* The palette's hover paints the title white for its dark hover tile; this
+   theme keeps the tile light, so keep the text dark (same selectors as the
+   inline palette, and this sheet loads after it). */
+#features ul li a:hover h2 {
+  color: inherit;
+}
+#features ul li a:hover .info p {
+  color: #333;
+}
 
 /* options.yml turns the breadcrumb off, but its white 70px shell still
    renders; hide the shell too. */

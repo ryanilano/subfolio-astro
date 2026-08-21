@@ -254,5 +254,11 @@ export function buildListingItems(
     });
   }
 
+  // PHP merged folders and files into ONE sorted list (the comment above the
+  // folder loop always said so); the port had skipped the sort, leaving every
+  // file below every folder. Sort on the displayed name, case-insensitive, so
+  // numeric prefixes like 000- can pin an item first.
+  items.sort((a, b) => a.filename.toLowerCase().localeCompare(b.filename.toLowerCase()));
+
   return items;
 }

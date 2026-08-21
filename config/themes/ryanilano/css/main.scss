@@ -55,17 +55,35 @@ body {
    { background-color: inherit }` at (0,2,3); the well rule below matches that
    depth so it wins by source order. This layer also loads after the port's
    inline palette, so it wins there too (see Layout.astro). */
-.gallery--grid li a {
+/* 2015 sized each gallery cell to its own thumbnail (float + shrink-wrap);
+   the port's base lays a rigid 7-column grid (li width 14.2857%). Intrinsic
+   wins here. */
+.gallery--grid li,
+.gallery--list li {
+  width: auto;
+}
+.gallery--grid li a,
+.gallery--list li a {
   color: #1a1a1a;
   background-color: #f5f5f5;
+  /* 2015 separation: tiles hug the thumbnail behind a hairline pad, with
+     16px of the gray page showing between them (legacy: a { padding: 1px;
+     margin: 0 16px 16px 0 }). Overrides the default theme's seamless sheet
+     (negative margins + 20px white mats). */
+  margin: 0 16px 16px 0;
+  padding: 1px;
+  border-width: 0;
 }
-.gallery--grid li a div.gallery_thumbnail {
+.gallery--grid li a div.gallery_thumbnail,
+.gallery--list li a div.gallery_thumbnail {
   background-color: #fff;
 }
-.gallery--grid li a:hover {
+.gallery--grid li a:hover,
+.gallery--list li a:hover {
   background-color: #1a1a1a;
 }
-.gallery--grid li a:hover p {
+.gallery--grid li a:hover p,
+.gallery--list li a:hover p {
   color: #fff;
 }
 

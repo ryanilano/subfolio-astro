@@ -5,7 +5,7 @@
  * Phase 2: size/date come from fs stat when possible; access/restricted are
  * deferred (Phase 4); new/updated tags are deferred (Phase 3).
  */
-import { statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { FolderEntry, ChildFile, ChildFolder } from "../loaders/schema.ts";
 import type { Options } from "./site.ts";
@@ -58,6 +58,27 @@ export interface ListingContext {
   contentRoot: string;
   /** Relative folder path from content root ("/" separators). */
   folderPath: string;
+}
+
+/** Recursive byte total of a folder's contents (build-time, lenient). */
+function folderSizeBytes(abs: string): number {
+  let total = 0;
+  let entries;
+  try {
+    entries = readdirSync(abs, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+  for (const e of entries) {
+    const p = join(abs, e.name);
+    if (e.isDirectory()) total += folderSizeBytes(p);
+    else if (e.isFile()) {
+      try {
+        total += statSync(p).size;
+      } catch { /* unreadable file contributes nothing */ }
+    }
+  }
+  return total;
 }
 
 function iconForFolder(name: string): string {
@@ -172,8 +193,14 @@ export function buildListingItems(
       icon: `${iconSet}_${iconFile}`,
       iconGrid: `${iconSetGrid}_${iconFile}`,
       filename: displayName,
-      size: "—",          // Phase 3: stat folder contents
-      date: "—",          // Phase 3: stat folder
+      // Real recursive byte total. Date stays a dash on purpose: folder
+      // mtimes say when files were copied in, not when the work happened;
+      // the year lives in the folder name instead.
+      size: (() => {
+        const bytes = folderSizeBytes(join(ctx.contentRoot, folder.path));
+        return bytes > 0 ? formatSize(bytes) : "—";
+      })(),
+      date: "—",
       kind: "",            // PHP: folders have no kind label
       comment: folder.comment ?? "",   // from a sibling .info sidecar
       restricted: false,   // Phase 4: access check

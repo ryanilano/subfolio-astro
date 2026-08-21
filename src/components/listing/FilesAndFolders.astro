@@ -7,7 +7,7 @@
  *
  * Wave component — port/listing-files-and-folders (C13).
  */
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { defaultOptions, type Options } from "../../lib/site.ts";
 import { t } from "../../lib/i18n.ts";
 import {
@@ -31,7 +31,10 @@ const { entry, options: opts = {}, context: ctx = {} } = Astro.props;
 // Merge props over defaults
 const opt: Options = { ...defaultOptions, ...opts };
 const listingCtx: ListingContext = {
-  contentRoot: ctx.contentRoot ?? fileURLToPath(new URL("../../content/examples/", import.meta.url)),
+  // Same env-first resolution as imageMeta.ts. The old default resolved the
+  // bundled fixture regardless of SUBFOLIO_CONTENT_DIR, so live-content builds
+  // stat'd files that were not there and every Size/Date rendered a dash.
+  contentRoot: ctx.contentRoot ?? resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples"),
   folderPath: ctx.folderPath ?? `${entry.path}/`,
 };
 

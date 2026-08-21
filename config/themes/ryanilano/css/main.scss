@@ -103,10 +103,15 @@ body {
   color: #333;
 }
 
-/* options.yml turns the breadcrumb off, but its white 70px shell still
-   renders; hide the shell too. */
+/* Breadcrumb + prev/next arrows stay (the only navigation), but flat: no
+   white 70px slab, just a slim strip on the page backdrop. */
 .header__breadcrumb {
-  display: none;
+  background-color: transparent;
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+}
+.header__navigation {
+  background-color: transparent;
 }
 
 /* The 2015 sheet set #container { width: 980px } then immediately overrode

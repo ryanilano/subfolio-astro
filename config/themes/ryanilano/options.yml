@@ -50,7 +50,7 @@ listing_mode: list
 ### ICON SET FOR LIST VIEW
 ### list = default, list1 = 1bit, list24 = 24bit transparent background
 
-icon_set_list: list24
+icon_set_list: list
 
 ### ICON SET FOR GRID
 ### grid = default, grid1 = 1bit, grid24 = 24bit transparent background
@@ -62,7 +62,7 @@ icon_set_grid: grid
 
 display_icons: true
 display_name: true
-display_size: false
+display_size: true
 display_date: true
 display_kind: true
 display_comment: true

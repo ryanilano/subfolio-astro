@@ -34,10 +34,6 @@ body {
   font-family: "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
 }
 
-/* Fixed max width (default is fluid). #container survives from the legacy markup. */
-#container {
-  max-width: 1024px;
-}
 .gallery {
   max-width: 70em;
 }
@@ -104,10 +100,9 @@ body {
   display: none;
 }
 
-/* The 2015 homepage grid flowed full-width: the archived sheet sets
-   #container { width: 980px } then immediately overrides it to width: 100%,
-   and the mirror measures fluid. Lift this layer's 1024px clamp only on pages
-   that carry the featured grid; everything else keeps the fixed width. */
-#container:has(#features) {
+/* The 2015 sheet set #container { width: 980px } then immediately overrode
+   it to width: 100%, and the mirror measures fluid everywhere. Match it:
+   listings and grids flow full-width. */
+#container {
   max-width: none;
 }

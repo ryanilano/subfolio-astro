@@ -33,7 +33,7 @@ site_meta_description: "Subfolio-Astro is a static site generator for portfolios
 ### YOUR ACTIVE THEME / CONTENT LOCATION
 ### Selects which themes/<theme>/options.yml the build reads
 
-theme: ryanilano
+theme: default
 directory: directory
 
 ### YOUR MARK-UP LANGUAGE (Textile, Markdown or HTML)

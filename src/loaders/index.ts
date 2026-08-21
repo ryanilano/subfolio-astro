@@ -16,6 +16,7 @@ import {
 import { loadFileKinds, kindByFile } from "./filekinds.ts";
 import { collectEmbeds, type EmbedInput, type Renderer } from "./embeds.ts";
 import { parseLink, parsePop, parseFeature, parseCut } from "./enhancers.ts";
+import { parseSubfolioYaml, asString } from "./yaml.ts";
 import { parseAccess } from "./access.ts";
 import { folderEntrySchema, type ChildFile, type ChildFolder, type Feature, type Related } from "./schema.ts";
 
@@ -73,6 +74,7 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
         const embedInputs: EmbedInput[] = [];
         const features: Feature[] = [];
         const related: Related[] = [];
+        const infoComments = new Map<string, string>();
         const excluded = new Set<string>();
         let access = null as ReturnType<typeof parseAccess> | null;
         const subdirsToWalk: string[] = [];
@@ -104,6 +106,16 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
           // .cut shortcuts are hidden but collected as related items.
           if (fileEnhancerOf(name) === "cut") {
             related.push(parseCut(contentRoot, relPath, relDir));
+            continue;
+          }
+
+          // .info sidecars are hidden but their comment attaches to the sibling
+          // item named by the filename minus the extension (SPEC-theme-api:
+          // item/folder property `comment`; fixture: 00_thumbnails.info).
+          if (!isDir && name.endsWith(cfg.infoExtension)) {
+            const doc = parseSubfolioYaml(readSafe(join(absDir, name)));
+            const comment = asString(doc.comment);
+            if (comment) infoComments.set(name.slice(0, -cfg.infoExtension.length), comment);
             continue;
           }
 
@@ -146,6 +158,17 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
         // the parent's folder list to avoid duplicate sibling-nav.
         const files = visibleFiles;
         const folders = visibleFolders.filter((f) => !excluded.has(f.name));
+
+        // Attach .info comments after the walk: dirent order must not matter
+        // (the sidecar can sort before or after its item).
+        for (const f of folders) {
+          const c = infoComments.get(f.name);
+          if (c) f.comment = c;
+        }
+        for (const f of files) {
+          const c = infoComments.get(f.name);
+          if (c) f.comment = c;
+        }
 
         const embeds = collectEmbeds(embedInputs, ctx);
         const self = folderEnhancerOf(relDir.split("/").pop() ?? "");

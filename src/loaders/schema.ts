@@ -76,6 +76,8 @@ const childFile = z.object({
       comment: z.string().optional(),
     })
     .optional(),
+  /** Comment from a sibling `<name>.info` sidecar (SPEC-theme-api: item property `comment`). */
+  comment: z.string().optional(),
 });
 
 const childFolder = z.object({
@@ -88,6 +90,8 @@ const childFolder = z.object({
   slideTarget: z.string().nullable(),
   /** site/oplx render as a single detail view rather than a listing. */
   single: z.boolean(),
+  /** Comment from a sibling `<name>.info` sidecar (SPEC-theme-api: folder property `comment`). */
+  comment: z.string().optional(),
 });
 
 const feature = z.object({

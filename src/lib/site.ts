@@ -155,7 +155,11 @@ function coerceLike<T>(raw: unknown, def: T): T {
 
 const configDir = process.env.SUBFOLIO_CONFIG_DIR ?? "./config";
 const settings = loadSettings(configDir);
-const theme = asString(settings.theme) || THEME_DEFAULT;
+// Deploy knob (same family as SUBFOLIO_SITE_URL / SUBFOLIO_NOINDEX): a deploy
+// can select its theme without editing the committed settings.yml, so the
+// public demo and its test suite keep the default theme while e.g. the archive
+// deploy ships theme "ryanilano". Unset = settings.yml, then "default".
+const theme = process.env.SUBFOLIO_THEME ?? (asString(settings.theme) || THEME_DEFAULT);
 const options = loadThemeOptions(configDir, theme);
 
 /**

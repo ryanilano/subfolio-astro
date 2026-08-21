@@ -159,8 +159,8 @@ export async function buildFileViewData(
   const ext = file.ext;
   const extension = ext.length > 6 ? ext.slice(0, 3) : ext;
 
-  // Comment from enhancer payloads
-  const comment = file.link?.comment ?? file.popup?.comment ?? "";
+  // Comment from enhancer payloads, else the sibling .info sidecar
+  const comment = file.link?.comment ?? file.popup?.comment ?? file.comment ?? "";
 
   // Link / target resolution
   let link: string;

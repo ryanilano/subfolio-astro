@@ -28,6 +28,9 @@ node_modules/
 npm-debug.log*
 # local-only scratch + Claude Code session logs (untracked, never pushed)
 .local/
+# preview scratch tree — carries live-content copies; a bare `git add -A` once
+# staged client content into this public repo (caught pre-push, 2026-08-21)
+.preview-dev/
 # macOS
 .DS_Store
 # personal Claude Code config + hooks (not shared; fan-out workers don't push).

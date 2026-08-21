@@ -175,7 +175,7 @@ export function buildListingItems(
       size: "—",          // Phase 3: stat folder contents
       date: "—",          // Phase 3: stat folder
       kind: "",            // PHP: folders have no kind label
-      comment: "",         // folders don't have enhancer comments
+      comment: folder.comment ?? "",   // from a sibling .info sidecar
       restricted: false,   // Phase 4: access check
       haveAccess: true,    // Phase 4: access check
       isNew: false,        // Phase 3: mtime-based
@@ -206,7 +206,7 @@ export function buildListingItems(
       // Phase 3: proper new/updated detection from config
     } catch { /* file may not exist */ }
 
-    const comment = file.link?.comment ?? file.popup?.comment ?? "";
+    const comment = file.link?.comment ?? file.popup?.comment ?? file.comment ?? "";
     const kindLabel = file.display;
 
     items.push({

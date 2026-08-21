@@ -45,7 +45,7 @@ display_file_extensions: false
 ### FILE LISTING VIEW (list/grid)
 ### Grid view displays larger icon and name only
 
-listing_mode: grid
+listing_mode: list
 
 ### ICON SET FOR LIST VIEW
 ### list = default, list1 = 1bit, list24 = 24bit transparent background

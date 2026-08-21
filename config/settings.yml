@@ -44,4 +44,4 @@ text_rendering: HTML
 ### YOUR THUMBNAIL FILE SIZE CAP (in MB)
 ### Thumbnails will not be generated for image files larger than cap
 
-thumbnail_max_filesize: 5
+thumbnail_max_filesize: 10

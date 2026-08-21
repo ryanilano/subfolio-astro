@@ -43,25 +43,30 @@ body {
   padding-left: 1.6em;
 }
 
-/* Dark gallery tiles — the signature ryanilano look. Legacy targeted #gallery/.grid/
-   .list; in the port the grid is .gallery--grid and each thumbnail box is
-   .gallery_thumbnail. Light tile frame, dark thumbnail well, full-black on hover.
+/* Gallery tiles, corrected 2026-08-21 against the archived 2015 site's OWN
+   rendering (its inline template_colors palette overrode the raw sheet's dark
+   frames — the mirror measures light-at-rest, dark-on-hover):
+     rest  = #f5f5f5 tile, white thumbnail well, #1a1a1a text
+     hover = #1a1a1a tile, white caption
+   The previous "dark tiles at rest" block here read the raw legacy css and
+   had the interaction inverted.
 
-   Specificity matters here: base _gallery.scss sets `div.gallery_thumbnail {
-   background-color: inherit }` as `.gallery li a div.gallery_thumbnail` (0,2,3). The
-   thumbnail rule below must MATCH that depth (`.gallery--grid li a div.gallery_thumbnail`,
-   also 0,2,3) so it beats the inherit by source order — a bare `.gallery--grid
-   .gallery_thumbnail` (0,2,0) loses, leaving the well light. The anchor/hover rules
-   already out-rank base. This layer also loads after the inline colorCss palette, so
-   it wins the gallery there too (see Layout.astro). */
+   Specificity: base _gallery.scss sets `div.gallery_thumbnail
+   { background-color: inherit }` at (0,2,3); the well rule below matches that
+   depth so it wins by source order. This layer also loads after the port's
+   inline palette, so it wins there too (see Layout.astro). */
 .gallery--grid li a {
-  background-color: #e4e4e4;
+  color: #1a1a1a;
+  background-color: #f5f5f5;
 }
 .gallery--grid li a div.gallery_thumbnail {
-  background-color: #333;
+  background-color: #fff;
 }
 .gallery--grid li a:hover {
-  background-color: #000;
+  background-color: #1a1a1a;
+}
+.gallery--grid li a:hover p {
+  color: #fff;
 }
 
 /* The 2015 featured grid, matched against the archived original by computed
@@ -90,17 +95,18 @@ body {
 #features ul li a .info p {
   padding: 0 10px 15px 0;
 }
+/* Hover, from the 2015 site's own inline palette (measured on the mirror):
+   the card flips dark, title goes white, description dims to #999. The
+   earlier keep-it-light hover here was wrong twice over. */
 #features ul li a:hover {
-  background-color: #f5f5f5;
+  background-color: #1a1a1a;
+  border-color: #1a1a1a;
 }
-/* The palette's hover paints the title white for its dark hover tile; this
-   theme keeps the tile light, so keep the text dark (same selectors as the
-   inline palette, and this sheet loads after it). */
 #features ul li a:hover h2 {
-  color: inherit;
+  color: white;
 }
 #features ul li a:hover .info p {
-  color: #333;
+  color: #999;
 }
 
 /* Breadcrumb + prev/next arrows stay (the only navigation), but flat: no

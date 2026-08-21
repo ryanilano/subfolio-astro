@@ -87,6 +87,33 @@ body {
   color: #fff;
 }
 
+/* Unfucking the widths: a cell may never exceed the page, images scale to
+   their cell, and on phones the fixed-height wells collapse so a shrunken
+   image is not floating in a tall white mat. */
+.gallery--grid li,
+.gallery--list li {
+  max-width: 100%;
+}
+.gallery--grid li a,
+.gallery--list li a {
+  max-width: 100%;
+}
+.gallery--grid li a img,
+.gallery--list li a img {
+  max-width: 100%;
+  height: auto;
+}
+@media (max-width: 640px) {
+  .gallery--grid li a div.gallery_thumbnail,
+  .gallery--list li a div.gallery_thumbnail {
+    min-height: 0;
+  }
+  .gallery--grid li a,
+  .gallery--list li a {
+    margin-right: 0;
+  }
+}
+
 /* The 2015 featured grid, matched against the archived original by computed
    style (measured in-browser on the /2015_ryanilano/ mirror, 2026-08-21):
    card = 250x230 CONTENT-box + 10px padding = 270x250 total, 5px gutters,

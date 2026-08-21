@@ -34,9 +34,9 @@ body {
   font-family: "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
 }
 
-.gallery {
-  max-width: 70em;
-}
+/* The legacy 70em gallery clamp is gone: it fit 2015-era screens, but on a
+   fluid page it strands two-thirds of a wide viewport and forces early float
+   wraps around wide images. Galleries flow with the page now. */
 
 /* Logo breathing room. */
 #logo {

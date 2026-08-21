@@ -67,3 +67,47 @@ body {
 .gallery--grid li a:hover {
   background-color: #000;
 }
+
+/* The 2015 featured grid, matched against the archived original by computed
+   style (measured in-browser on the /2015_ryanilano/ mirror, 2026-08-21):
+   card = 250x230 CONTENT-box + 10px padding = 270x250 total, 5px gutters,
+   permanent #f5f5f5 tile, 4px radius, no border, 249x159 thumbnail at natural
+   size. content-box is load-bearing twice over: it gives the 249px image room
+   inside the 250px content area, and with the hard height it pins every tile
+   to the same 250px so the floats pack into clean rows. The port's inline
+   min-height:230 agrees with height:230 here, so nothing stretches. */
+#features ul li a {
+  box-sizing: content-box;
+  height: 230px;
+  padding: 10px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+  border-radius: 4px;
+  background-color: #f5f5f5;
+}
+#features ul li a img {
+  margin: 0;
+}
+#features ul li a .info h2 {
+  font-weight: 700;
+}
+#features ul li a .info p {
+  padding: 0 10px 15px 0;
+}
+#features ul li a:hover {
+  background-color: #f5f5f5;
+}
+
+/* options.yml turns the breadcrumb off, but its white 70px shell still
+   renders; hide the shell too. */
+.header__breadcrumb {
+  display: none;
+}
+
+/* The 2015 homepage grid flowed full-width: the archived sheet sets
+   #container { width: 980px } then immediately overrides it to width: 100%,
+   and the mirror measures fluid. Lift this layer's 1024px clamp only on pages
+   that carry the featured grid; everything else keeps the fixed width. */
+#container:has(#features) {
+  max-width: none;
+}

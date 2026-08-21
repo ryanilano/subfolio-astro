@@ -70,11 +70,11 @@ display_comment: true
 ### SHOW/HIDE INTERFACE ELEMENTS (true/false)
 ### Make sure you leave a way for your users to navigate
 
-display_header: true
+display_header: false
 display_collapse_header: false
 display_send_page: false
 display_tiny_url: false
-display_breadcrumb: true
+display_breadcrumb: false
 display_navigation: true
 display_file_listing_header: true
 display_updated_since: false

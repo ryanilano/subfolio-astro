@@ -171,3 +171,17 @@ body {
 #container {
   max-width: none;
 }
+
+/* List-row dividers: the base theme draws them #f1f1f1, which is LIGHTER than
+   this theme's #ececec page, so on the grey backdrop they read as white
+   streaks. A hairline darker than the page instead. */
+.list--list,
+.list--fit,
+.list--column,
+.list--masonry {
+  border-bottom-color: #d8d8d8;
+
+  .list__row {
+    border-bottom-color: #d8d8d8;
+  }
+}

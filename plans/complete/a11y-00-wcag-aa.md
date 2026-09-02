@@ -1,3 +1,7 @@
+---
+domd-id: 9a76136e-3657-45b9-9d5a-f536a228a088
+---
+
 # Accessibility (WCAG 2.1 AA) for the Astro port
 
 ## Context

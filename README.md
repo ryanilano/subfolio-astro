@@ -1,6 +1,6 @@
 # Subfolio-Astro
 
-AstroJS port of [Subfolio](https://github.com/area17/subfolio) — a no-database file browser that turns a folder on disk into a themeable web gallery. The project has been reimagined from its original Kohana 2.x / PHP 5.6 stack to an **Astro static site** (Cloudflare Pages target, hybrid-ready).
+AstroJS port of [Subfolio](https://github.com/area17/subfolio) — a no-database file browser that turns a folder on disk into a themeable web gallery. The project has been reimagined from its original Kohana 2.x / PHP 5.6 stack to an **Astro static site** (Cloudflare Pages target, hybrid-ready). See it Live https://ryanilano.github.io/subfolio-astro/
 
 ## Docs
 

@@ -26,6 +26,9 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Opt-in analytics for this deploy only; forks leave it unset.
+          SUBFOLIO_PLAUSIBLE_SCRIPT_URL: https://stats.ilano.fyi/js/pa-_ciQZXU9EagKMnDXE3M3N.js
 
       # Gate the deploy on the structural smoke suite + SEO head assertions.
       # Both assert against the dist/ the Build step just produced (no rebuild).

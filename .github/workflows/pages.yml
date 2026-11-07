@@ -78,6 +78,8 @@ jobs:
           # or an interpolated variable. This build only ever sees the
           # committed fixture.
           SUBFOLIO_CONTENT_DIR: ./content/examples
+          # Opt-in analytics for this deploy only; forks leave it unset.
+          SUBFOLIO_PLAUSIBLE_SCRIPT_URL: https://stats.ilano.fyi/js/pa-LQQO387vBR1xIQw-PeBEE.js
 
   deploy:
     needs: build

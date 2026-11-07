@@ -109,6 +109,9 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
 // process.env (not import.meta.env) — matches how every other SUBFOLIO_* var is
 // read in this codebase, and Vite won't expose an unprefixed var on import.meta.
 const noindex = process.env.SUBFOLIO_NOINDEX === "1";
+// Opt-in Plausible analytics: the full tracker script URL for this deploy. Unset
+// (the default, and every fork) ships no analytics at all.
+const plausibleScript = process.env.SUBFOLIO_PLAUSIBLE_SCRIPT_URL;
 // Description: per-page override → site default → undefined (tag omitted).
 const ogDescription = description || site_meta_description || undefined;
 // og:image must be absolute. Callers pass a root-relative thumbnail URL.
@@ -281,6 +284,16 @@ const colorCss = `
     <>
       <link rel="icon" href={`${base}${site_favicon_url.replace(/^\//, '')}?v=2`} type={faviconType} />
       <link rel="shortcut icon" href={`${base}${site_favicon_url.replace(/^\//, '')}?v=2`} type={faviconType} />
+    </>
+  )}
+
+  {plausibleScript && (
+    <>
+      <script is:inline defer src={plausibleScript}></script>
+      <script is:inline>
+        window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+        plausible.init();
+      </script>
     </>
   )}
 

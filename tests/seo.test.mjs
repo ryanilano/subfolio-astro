@@ -110,3 +110,16 @@ test("image-less detail page omits og:image and stays twitter summary", () => {
   assert.equal(attrContent(html, 'property="og:image"'), null);
   assert.equal(attrContent(html, 'name="twitter:card"'), "summary");
 });
+
+// Analytics are opt-in per deploy. Without SUBFOLIO_PLAUSIBLE_SCRIPT_URL a build
+// must carry no tracker, so a fork never reports to someone else's stats server.
+// With it set, the tracker must load from exactly that URL.
+test("analytics tag follows SUBFOLIO_PLAUSIBLE_SCRIPT_URL", () => {
+  const html = page("/");
+  const url = process.env.SUBFOLIO_PLAUSIBLE_SCRIPT_URL;
+  if (url) {
+    assert.ok(html.includes(`src="${url}"`), "tracker script missing");
+  } else {
+    assert.ok(!html.includes("plausible"), "tracker present in a default build");
+  }
+});

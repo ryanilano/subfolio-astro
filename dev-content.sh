@@ -43,6 +43,7 @@ if [ -f .env.content ]; then
   export_env_key SUBFOLIO_CONTENT_DIR
   export_env_key SUBFOLIO_TEXT_RENDERING
   export_env_key SUBFOLIO_CONFIG_DIR
+  export_env_key SUBFOLIO_PLAUSIBLE_SCRIPT_URL
 fi
 
 if [ -n "${SUBFOLIO_CONTENT_DIR:-}" ]; then

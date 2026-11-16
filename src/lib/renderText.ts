@@ -312,6 +312,12 @@ export function renderText(raw: string, renderer: Renderer): string {
     return renderTextile(raw);
   }
 
+  // Never fall through to plain text for a value that isn't `none`; the setting
+  // is validated in src/lib/textRendering.ts, so this only catches a bad caller.
+  if (renderer !== "none") {
+    throw new Error(`renderText: unknown renderer ${JSON.stringify(renderer)}`);
+  }
+
   // `none`: plain text, escaped, bare URLs linked.
   return `<p>${autoLinkUrls(escapeHtml(raw)).replace(/\n{2,}/g, "</p>\n<p>").replace(/\n/g, "<br>\n")}</p>`;
 }

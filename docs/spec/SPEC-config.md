@@ -91,7 +91,9 @@ three engines.
 
 **Where the setting comes from.** The env var `SUBFOLIO_TEXT_RENDERING`, default
 `markdown`, read by the loader (`src/content.config.ts`) and the page route
-(`src/pages/[...path].astro`). The `text_rendering` key in `config/settings.yml` is
+(`src/pages/[...path].astro`). Both take it from `src/lib/textRendering.ts`, which
+ignores case and surrounding spaces, treats unset or empty as `markdown`, and stops the
+build on any other value with a message listing `none, textile, markdown`. The `text_rendering` key in `config/settings.yml` is
 not read (`src/lib/site.ts`). One source means config time and render time can't
 disagree, which is the split-build bug recorded in `docs/TESTING.md` Findings #3.
 

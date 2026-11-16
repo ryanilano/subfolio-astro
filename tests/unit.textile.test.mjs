@@ -15,6 +15,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { renderText } from "../src/lib/renderText.ts";
+import { parseRenderer } from "../src/lib/textRendering.ts";
 
 const tx = (src) => renderText(src, "textile");
 // A UTF-8 byte-order mark, built here so the source holds no invisible character.
@@ -216,6 +217,38 @@ test("none and markdown keep their own output for the same source", () => {
   const src = "h1. Darko - Skate Style";
   assert.equal(renderText(src, "none"), "<p>h1. Darko - Skate Style</p>");
   assert.equal(renderText(src, "markdown"), "<p>h1. Darko - Skate Style</p>");
+});
+
+// --- The SUBFOLIO_TEXT_RENDERING setting (src/lib/textRendering.ts) ---------------
+
+test("the renderer setting ignores case and surrounding spaces", () => {
+  for (const v of ["textile", "Textile", "TEXTILE", " textile "]) assert.equal(parseRenderer(v), "textile", v);
+  assert.equal(parseRenderer("Markdown"), "markdown");
+  assert.equal(parseRenderer("NONE"), "none");
+});
+
+test("an unset or empty renderer setting keeps the markdown default", () => {
+  assert.equal(parseRenderer(undefined), "markdown");
+  assert.equal(parseRenderer(""), "markdown");
+  assert.equal(parseRenderer("   "), "markdown");
+});
+
+test("an unknown renderer setting stops the build and names the allowed values", () => {
+  for (const v of ["txtile", "html", "md"]) {
+    assert.throws(
+      () => parseRenderer(v),
+      (err) =>
+        err instanceof Error &&
+        err.message.includes("SUBFOLIO_TEXT_RENDERING") &&
+        err.message.includes(JSON.stringify(v)) &&
+        err.message.includes("none, textile, markdown"),
+      v,
+    );
+  }
+});
+
+test("renderText refuses an unknown renderer instead of rendering plain text", () => {
+  assert.throws(() => renderText("h1. Title", "txtile"), /unknown renderer/);
 });
 
 // --- Real content: Ryan's 2011 K2 folder --------------------------------------

@@ -20,11 +20,16 @@ const {
   displayUpdatedSince = true,
   copyright: copy = siteConfig.site_copyright || "",
 } = Astro.props;
+
+// Optional credit line (settings.yml `site_footer_credit`). Trusted HTML: it is
+// the site author's own config file, same trust model as text embeds.
+const credit = siteConfig.site_footer_credit || "";
 ---
 
 <footer class="footer" id="footer">
   <div class="footer__copyright">
     {displayCopyright && copy && <span class="copyright__text">{copy}</span>}
+    {credit && <span class="footer__credit" set:html={credit} />}
   </div>
 
   {
@@ -40,3 +45,24 @@ const {
     )
   }
 </footer>
+
+<style>
+  /* The credit sits inside .footer__copyright, so it runs on from the
+     copyright on the same row and wraps like ordinary text when narrow.
+     The theme makes footer spans and links 70px inline-blocks with side
+     padding; inside running text they must be plain inline elements. */
+  .footer__credit,
+  .footer__credit :global(span),
+  .footer__credit :global(a) {
+    display: inline;
+    height: auto;
+    padding: 0;
+  }
+  .footer__credit :global(a) {
+    color: inherit;
+    text-decoration: underline;
+  }
+  .footer__credit :global(.footer__sep) {
+    margin-right: 0.35em;
+  }
+</style>

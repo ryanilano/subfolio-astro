@@ -29,6 +29,8 @@ const DEFAULT_SITE_CONFIG = {
   site_favicon_url: "/images/favicon.ico",
   /** Meta description. */
   site_meta_description: "",
+  /** Optional right-hand footer credit (trusted HTML from settings.yml). Empty = not rendered. */
+  site_footer_credit: "",
   /** Google Analytics code. Empty = disabled. */
   google_analytics_code: "",
   /** Copyright text. */
@@ -186,6 +188,8 @@ export const siteConfig = {
   site_copyright: decodeHtmlEntities(
     asString(settings.site_copyright) ?? DEFAULT_SITE_CONFIG.site_copyright,
   ),
+  site_footer_credit:
+    asString(settings.site_footer_credit) ?? DEFAULT_SITE_CONFIG.site_footer_credit,
   google_analytics_code:
     asString(settings.google_analytics_code) ?? DEFAULT_SITE_CONFIG.google_analytics_code,
   // theme options.yml (logo/favicon/palette — options wins, matches PHP precedence)

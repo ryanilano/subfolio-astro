@@ -100,6 +100,11 @@ markup was inlined into the page.
   highlight, about 0.1% of the pixels. Its gallery thumbnail does include them, because sharp rasterizes it with the
   linked files beside it. Export with images embedded to show the same thing in both.
 - Thumbnails for both formats use a PNG base file; see SPEC-thumbnails §3.6.
+- og:image is always PNG/JPEG/GIF. A custom thumbnail keeps its source's format, so for an SVG
+  or WebP source with one, og:image uses the PNG gen-thumbs made for that source
+  (`src/lib/thumbnailPipeline.ts` `ogImageFor`).
+- An SVG sharp can't measure (malformed, or zero size) is shown without `width`/`height`
+  rather than as an invisible 0×0 image (`src/lib/imgSize.ts`).
 - `jpeg` is still not in the list (upstream had `jpg` only), so `.jpeg` files keep the
   download box even though `gen-thumbs` thumbnails them. Not changed here.
 

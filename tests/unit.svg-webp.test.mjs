@@ -10,7 +10,7 @@
  */
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -19,6 +19,7 @@ import sharp from "sharp";
 import { loadFileKinds, kindByFile } from "../src/loaders/filekinds.ts";
 import { collectEmbeds } from "../src/loaders/embeds.ts";
 import { autoThumbName } from "../src/lib/thumbName.ts";
+import { sizeAttrs } from "../src/lib/imgSize.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const kinds = loadFileKinds(join(ROOT, "config/filekinds.yml"));
@@ -30,6 +31,11 @@ const BOARD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="6
   <rect width="800" height="600" fill="#0a7"/>
 </svg>`;
 const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30"/></svg>`;
+// Malformed XML: sharp can't read it, so its size is unknown (0×0).
+const BROKEN_SVG = `<svg xmlns="http://www.w3.org/2000/svg"><rect></svg>`;
+
+const raster = (w, h, fmt, out) =>
+  sharp({ create: { width: w, height: h, channels: 3, background: "#36c" } })[fmt]().toFile(out);
 
 let content;
 let cache;
@@ -42,6 +48,20 @@ before(async () => {
   await sharp({ create: { width: 800, height: 600, channels: 3, background: "#c33" } })
     .webp()
     .toFile(join(content, "photo.webp"));
+  writeFileSync(join(content, "broken.svg"), BROKEN_SVG);
+
+  // og/: sources that each have a custom thumbnail (same name, same format).
+  const og = join(content, "og");
+  const custom = join(og, "-thumbnails-custom");
+  mkdirSync(custom, { recursive: true });
+  writeFileSync(join(og, "board.svg"), BOARD_SVG);
+  writeFileSync(join(custom, "board.svg"), ICON_SVG);
+  await raster(800, 600, "webp", join(og, "shot.webp"));
+  await raster(300, 200, "webp", join(custom, "shot.webp"));
+  await raster(800, 600, "png", join(og, "pic.png"));
+  await raster(300, 200, "png", join(custom, "pic.png"));
+  writeFileSync(join(og, "tiny.svg"), ICON_SVG); // 64px: no auto thumbnail
+  writeFileSync(join(custom, "tiny.svg"), ICON_SVG);
 });
 
 after(() => {
@@ -116,6 +136,18 @@ test("image dimensions are read from SVG and WebP", async () => {
   const icon = await imageMetaFor("icon.svg");
   assert.equal(icon.width, 64);
   assert.equal(icon.height, 64);
+  // An SVG sharp can't read comes back 0×0 ...
+  const broken = await imageMetaFor("broken.svg");
+  assert.equal(broken.width, 0);
+  assert.equal(broken.height, 0);
+});
+
+test("an unknown (0×0) size leaves width/height off the <img> instead of hiding it", () => {
+  // ... and Img.astro spreads sizeAttrs(), so no width="0" height="0".
+  assert.deepEqual(sizeAttrs(0, 0), {});
+  assert.deepEqual(sizeAttrs(800, 0), {});
+  assert.deepEqual(sizeAttrs(800, 600), { width: 800, height: 600 });
+  assert.deepEqual(sizeAttrs(891 / 2, 900 / 2), { width: 445.5, height: 450 }); // @2x halves, as before
 });
 
 // --- Thumbnail generation (scripts/gen-thumbs.mjs) -------------------------------------
@@ -152,5 +184,29 @@ test("gen-thumbs: no thumbnail for an SVG already at thumbnail size, and no SVG 
 });
 
 test("gen-thumbs never writes into the content folder", () => {
-  assert.deepEqual(readdirSync(content).sort(), ["board.svg", "icon.svg", "photo.webp"]);
+  assert.deepEqual(readdirSync(content).sort(), ["board.svg", "broken.svg", "icon.svg", "og", "photo.webp"]);
+});
+
+// --- og:image (src/lib/thumbnailPipeline.ts ogImageFor) ---------------------------------
+
+test("og:image swaps an SVG or WebP custom thumbnail for the generated PNG", async () => {
+  process.env.SUBFOLIO_CONTENT_DIR = content;
+  process.env.SUBFOLIO_THUMB_CACHE = cache;
+  const { thumbnailFor, ogImageFor } = await import("../src/lib/thumbnailPipeline.ts");
+
+  // The gallery still shows the custom thumbnail itself ...
+  const gallery = await thumbnailFor("og/board.svg");
+  assert.equal(gallery.kind, "custom");
+  assert.equal(gallery.url, "/directory/og/-thumbnails-custom/board.svg");
+  // ... but og:image gets the PNG gen-thumbs made for the source.
+  assert.match(await ogImageFor(["og/board.svg"]), /^\/directory\/og\/-thumbnails\/board\.svg\.png\?rnd=\d+$/);
+  assert.match(await ogImageFor(["og/shot.webp"]), /^\/directory\/og\/-thumbnails\/shot\.webp\.png\?rnd=\d+$/);
+});
+
+test("og:image keeps a PNG/JPEG/GIF custom thumbnail, and skips an SVG with no PNG", async () => {
+  const { ogImageFor } = await import("../src/lib/thumbnailPipeline.ts");
+  assert.equal(await ogImageFor(["og/pic.png"]), "/directory/og/-thumbnails-custom/pic.png");
+  // tiny.svg is 64px, so it has no auto PNG: the next image is used.
+  assert.equal(await ogImageFor(["og/tiny.svg", "og/pic.png"]), "/directory/og/-thumbnails-custom/pic.png");
+  assert.equal(await ogImageFor([]), undefined);
 });

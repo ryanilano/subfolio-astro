@@ -21,6 +21,10 @@ import { autoThumbName } from "./thumbName.ts";
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 const cacheRoot = resolve(process.env.SUBFOLIO_THUMB_CACHE ?? "./.thumb-cache");
 
+// Site base path. import.meta.env is supplied by Vite (Astro); plain Node, which
+// runs the unit tests, has none, so fall back to the default base "/".
+const BASE_URL: string = import.meta.env?.BASE_URL ?? "/";
+
 export interface ThumbnailResult {
   /** URL to the thumbnail, or "" if none exists (skipped at gen time). */
   url: string;
@@ -81,7 +85,7 @@ async function customThumbSources(
   const names = await listCacheDir(absDir);
   if (names.length === 0) return undefined;
 
-  const base = `${import.meta.env.BASE_URL}directory/${encParent}${encodeURIComponent(customDir)}/`;
+  const base = `${BASE_URL}directory/${encParent}${encodeURIComponent(customDir)}/`;
   const byFormat: Record<string, { w: number; url: string }[]> = { avif: [], webp: [] };
 
   for (const file of names) {
@@ -159,7 +163,7 @@ export async function thumbnailFor(
     // `url` is the user's untouched original in the content tree and MUST stay
     // exactly this — it is the <img> fallback, the downloadable bytes, and what
     // tests/smoke.thumbnails.test.mjs matches on.
-    const url = `${import.meta.env.BASE_URL}directory/${encParent}${encodeURIComponent(customDir)}/${encodeURIComponent(name)}`;
+    const url = `${BASE_URL}directory/${encParent}${encodeURIComponent(customDir)}/${encodeURIComponent(name)}`;
     const out: ThumbnailResult = { url, kind: "custom" };
     // Right-sized modern-format ladder from .thumb-cache (gen-thumbs.mjs). These
     // are derived siblings only; the original above is never rewritten.
@@ -169,15 +173,34 @@ export async function thumbnailFor(
     return out;
   }
 
-  // 2. Pre-generated auto thumbnail (lives in the cache). Use its ctime as the
-  //    cache-buster, mirroring PHP's ?rnd={ctime} (SPEC §3.6).
+  // 2. Pre-generated auto thumbnail (lives in the cache).
+  const out = await autoThumbnailFor(relPath);
+  cache.set(relPath, out);
+  return out;
+}
+
+const autoCache = new Map<string, ThumbnailResult>();
+
+/**
+ * The pre-generated auto thumbnail alone, ignoring any custom thumbnail. Uses its
+ * ctime as the cache-buster, mirroring PHP's ?rnd={ctime} (SPEC §3.6). Returns
+ * kind "none" with an empty url when none was generated (too big / already small).
+ */
+export async function autoThumbnailFor(relPath: string): Promise<ThumbnailResult> {
+  const cached = autoCache.get(relPath);
+  if (cached) return cached;
+
+  const parentDir = dirname(relPath); // "." for root-level files
+  const name = basename(relPath);
+  const encParent = parentDir === "." ? "" : `${encodeParts(parentDir)}/`;
+
   // SVG/WebP sources have a PNG base thumbnail (`logo.svg.png`) — src/lib/thumbName.ts.
   const thumbName = autoThumbName(name);
   const thumbRel = parentDir === "." ? `-thumbnails/${thumbName}` : `${parentDir}/-thumbnails/${thumbName}`;
   try {
     const st = await stat(resolve(cacheRoot, thumbRel));
     const rnd = Math.floor(st.ctimeMs);
-    const base = `${import.meta.env.BASE_URL}directory/${encParent}-thumbnails/${encodeURIComponent(thumbName)}`;
+    const base = `${BASE_URL}directory/${encParent}-thumbnails/${encodeURIComponent(thumbName)}`;
     const url = `${base}?rnd=${rnd}`;
 
     // Modern-format siblings (Phase C). gen-thumbs.mjs writes `<name>.webp` /
@@ -196,13 +219,35 @@ export async function thumbnailFor(
 
     const out: ThumbnailResult = { url, kind: "auto" };
     if (sources.avif || sources.webp) out.sources = sources;
-    cache.set(relPath, out);
+    autoCache.set(relPath, out);
     return out;
   } catch {
     /* no thumbnail was generated (too big / already small) — suppress */
   }
 
   const out: ThumbnailResult = { url: "", kind: "none" };
-  cache.set(relPath, out);
+  autoCache.set(relPath, out);
   return out;
+}
+
+/**
+ * A custom thumbnail keeps its source's name and format, so for an SVG or WebP
+ * source it is itself SVG or WebP. Social crawlers don't reliably accept either
+ * as og:image.
+ */
+const NOT_FOR_OG = /\.(svg|webp)$/i;
+
+/**
+ * og:image for a folder: the first of `relPaths` (its image files, in listing
+ * order) with a usable thumbnail. Always a PNG/JPEG/GIF: where a custom
+ * thumbnail is SVG or WebP, the auto PNG gen-thumbs made for the same source
+ * (`-thumbnails/<name>.png`) is used instead, or the next image if there is none.
+ */
+export async function ogImageFor(relPaths: string[]): Promise<string | undefined> {
+  for (const relPath of relPaths) {
+    let thumb = await thumbnailFor(relPath);
+    if (thumb.kind === "custom" && NOT_FOR_OG.test(relPath)) thumb = await autoThumbnailFor(relPath);
+    if (thumb.url) return thumb.url;
+  }
+  return undefined;
 }

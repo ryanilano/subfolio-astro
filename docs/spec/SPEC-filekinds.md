@@ -85,6 +85,29 @@ file (or `default.php` fallback) → the display name → brief instructions.
 | indb  | `indb`                                          | indd  | default     | InDesign Book       | Need Adobe InDesign or similar.                                     |
 | ase   | `ase`                                           | ase   | default     | Adobe Swatch File   | Need Adobe Creative Suite or similar.                               |
 
+**Astro port: `img` also takes `webp` and `svg`** (`config/filekinds.yml`). Upstream
+predates both formats; every current browser displays them, so they get the image
+detail view, gallery thumbnails and `-t-`/`-m-`/`-b-` image embeds instead of the
+download box. Before this, a `-t-` SVG fell through to the text embed path and its
+markup was inlined into the page.
+
+- An SVG is only ever shown through `<img>` (detail view, embeds) or as a rasterized
+  PNG thumbnail (gallery), never inlined. Browsers run no scripts and load no external
+  files for an SVG shown through `<img>`.
+- Consequence: an SVG that links its images by file name (for example an Illustrator SVG
+  with linked PNGs, `href="drawing-1.png"`) shows without those images on its detail
+  page. In a typical drawing that is a few textures or small details. Its gallery
+  thumbnail does include them, because sharp rasterizes it with the linked files beside
+  it. Export with images embedded to show the same thing in both.
+- Thumbnails for both formats use a PNG base file; see SPEC-thumbnails §3.6.
+- og:image is always PNG/JPEG/GIF. A custom thumbnail keeps its source's format, so for an SVG
+  or WebP source with one, og:image uses the PNG gen-thumbs made for that source
+  (`src/lib/thumbnailPipeline.ts` `ogImageFor`).
+- An SVG sharp can't measure (malformed, or zero size) is shown without `width`/`height`
+  rather than as an invisible 0×0 image (`src/lib/imgSize.ts`).
+- `jpeg` is still not in the list (upstream had `jpg` only), so `.jpeg` files keep the
+  download box even though `gen-thumbs` thumbnails them. Not changed here.
+
 ### Audio / video kinds
 
 | Kind  | Extensions                                      | Icon  | View        | Display             | Instructions                                                        |

@@ -12,6 +12,7 @@
 import { siteConfig } from "../../lib/site.ts";
 import HideableDownloadBox from "./HideableDownloadBox.astro";
 import DownloadBox from "./DownloadBox.astro";
+import { sizeAttrs } from "../../lib/imgSize.ts";
 import type { FileViewData } from "../../lib/fileHelpers.ts";
 
 interface Props {
@@ -26,6 +27,10 @@ const hasShadow = f.hasShadow;
 const hasBrowser = f.hasBrowser;
 const isRetina = f.isRetina;
 const shadowStyle = siteConfig.shadow_style_css;
+// No width/height when sharp couldn't measure the file (0×0); see src/lib/imgSize.ts.
+// Shadow/browser images keep their full size; a plain @2x image shows at half.
+const full = sizeAttrs(f.width, f.height);
+const half = sizeAttrs(f.width / 2, f.height / 2);
 ---
 
 {
@@ -36,16 +41,16 @@ const shadowStyle = siteConfig.shadow_style_css;
       {
         hasShadow ? (
           <div class="detailIMG__wrapper" style={`box-shadow:${shadowStyle};`}>
-            <img width={f.width} height={f.height} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
+            <img {...full} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
           </div>
         ) : hasBrowser ? (
           <div class="detailIMG__wrapper detailIMG__wrapper--browser" style={`box-shadow:${shadowStyle};`}>
-            <img width={f.width} height={f.height} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
+            <img {...full} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
           </div>
         ) : isRetina ? (
-          <img width={f.width / 2} height={f.height / 2} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
+          <img {...half} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
         ) : (
-          <img width={f.width} height={f.height} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
+          <img {...full} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
         )
       }
       <HideableDownloadBox file={f} />

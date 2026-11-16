@@ -3,8 +3,12 @@
 
 ### IMAGE FILE KINDS
 
+# svg and webp: added by the Astro port (upstream lists gif, png, jpg). Every
+# current browser displays both, so they get the image view, gallery thumbnails
+# and image embeds instead of a download box. SVGs are only ever shown through
+# <img>, never inlined, so scripts inside a user's SVG can't run on the page.
 img:
-  extensions: [gif, png, jpg]
+  extensions: [gif, png, jpg, webp, svg]
   icon: img
   display: Image File
   instructions:>

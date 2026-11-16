@@ -284,6 +284,16 @@ No generation happens. Custom thumbnails are served as-is.
    d. **Save:** `$image->save($thumbnail)` — writes to `-thumbnails/{filename}`.
 5. **Return:** If the thumbnail file exists, append `?rnd={ctime}` as a cache-buster query parameter.
 
+**Astro port: SVG and WebP sources** (`img` kind in the port only, see SPEC-filekinds §2).
+The auto thumbnail is written as PNG under the source name plus `.png`
+(`-thumbnails/logo.svg.png`, `-thumbnails/photo.webp.png`), with the usual `.webp` and
+`.avif` siblings next to it (`logo.svg.png.webp`). sharp can rasterize SVG but not write
+it, and the base thumbnail stays PNG/JPEG/GIF everywhere because it is the `<img>`
+fallback and the og:image. The generator (`scripts/gen-thumbs.mjs`) and the URL
+resolver (`src/lib/thumbnailPipeline.ts`) share the rule in `src/lib/thumbName.ts`. The
+size and dimension checks above apply unchanged; an SVG's height is its intrinsic
+height at 72 dpi (its `height` attribute, else its viewBox).
+
 #### No-op cases (return `''`):
 
 - Source file exceeds `thumbnail_max_filesize`.

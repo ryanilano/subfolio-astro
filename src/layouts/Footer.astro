@@ -29,9 +29,8 @@ const credit = siteConfig.site_footer_credit || "";
 <footer class="footer" id="footer">
   <div class="footer__copyright">
     {displayCopyright && copy && <span class="copyright__text">{copy}</span>}
+    {credit && <span class="footer__credit" set:html={credit} />}
   </div>
-
-  {credit && <div class="footer__credit" set:html={credit} />}
 
   {
     displayUpdatedSince && (
@@ -48,34 +47,22 @@ const credit = siteConfig.site_footer_credit || "";
 </footer>
 
 <style>
-  /* Credit runs on from the copyright on the same line (both float left).
-     Stacks under the copyright on narrow screens instead of crowding it. */
-  .footer__credit {
-    float: left;
-    text-align: left;
-    line-height: 70px; /* matches the theme's 70px footer link boxes */
-  }
-  /* The theme makes footer links 70px inline-blocks; inside running text
-     they must be plain inline links or each one forces its own tall line. */
+  /* The credit sits inside .footer__copyright, so it runs on from the
+     copyright on the same row and wraps like ordinary text when narrow.
+     The theme makes footer spans and links 70px inline-blocks with side
+     padding; inside running text they must be plain inline elements. */
+  .footer__credit,
+  .footer__credit :global(span),
   .footer__credit :global(a) {
     display: inline;
     height: auto;
     padding: 0;
+  }
+  .footer__credit :global(a) {
     color: inherit;
     text-decoration: underline;
   }
-  @media (max-width: 639px) {
-    .footer__credit {
-      float: none;
-      clear: both;
-      text-align: left;
-      /* The footer's 70px line box suits one line; wrapped text needs normal leading. */
-      line-height: 1.5;
-      padding: 0 5px 24px;
-    }
-    /* A leading separator makes no sense once the credit starts its own line. */
-    .footer__credit :global(.footer__sep) {
-      display: none;
-    }
+  .footer__credit :global(.footer__sep) {
+    margin-right: 0.35em;
   }
 </style>

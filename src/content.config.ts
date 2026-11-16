@@ -1,7 +1,7 @@
 import { defineCollection } from "astro:content";
 import { fileURLToPath } from "node:url";
 import { subfolioLoader } from "./loaders/index.ts";
-import type { Renderer } from "./loaders/embeds.ts";
+import { textRenderer } from "./lib/textRendering.ts";
 
 /**
  * Registers the custom Subfolio loader as a content collection. The content root
@@ -11,7 +11,8 @@ import type { Renderer } from "./loaders/embeds.ts";
  */
 
 const contentDir = process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples";
-const renderer = (process.env.SUBFOLIO_TEXT_RENDERING ?? "markdown") as Renderer;
+// Validated (case-insensitive; unknown values stop the build) in src/lib/textRendering.ts.
+const renderer = textRenderer;
 
 // filekinds.yml is bundled at <repo>/config/filekinds.yml.
 const filekindsPath = fileURLToPath(new URL("../config/filekinds.yml", import.meta.url));

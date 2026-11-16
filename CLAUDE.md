@@ -13,7 +13,7 @@ npm install                  # Node 24 (.nvmrc)
 npm run dev                  # astro dev → rendered listing/detail pages
 npm run build                # gen-* pre-passes + astro check (types) + astro build
 npm run preview              # serve static build
-npm run test                 # structural smoke suite — asserts against dist/ (build first)
+npm run test                 # structural smoke suite — asserts against dist/ (build first) — plus no-build unit tests (tests/unit.*)
 npm run test:seo             # SEO/OG head assertions against dist/
 npm run test:a11y            # axe + contrast (Playwright; rebuilds)
 ./dev-content.sh [build]     # run against LIVE content (reads .env.content — see README)

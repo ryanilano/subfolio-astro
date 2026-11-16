@@ -17,7 +17,7 @@ import Listing from "../components/listing/Listing.astro";
 import { loadFileKinds } from "../loaders/filekinds.ts";
 import { buildFileViewData, type FileViewData } from "../lib/fileHelpers.ts";
 import { thumbnailFor } from "../lib/thumbnailPipeline.ts";
-import type { Renderer } from "../lib/renderText.ts";
+import { textRenderer } from "../lib/textRendering.ts";
 import { rssItemsFor, type RssItem } from "../lib/rssFeed.ts";
 import Rss from "../components/filekinds/Rss.astro";
 import {
@@ -33,8 +33,8 @@ import type { FolderEntry, ChildFile } from "../loaders/schema.ts";
 // build runtime, not into dist/. Mirrors src/content.config.ts.
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 const filekindsPath = resolve("./config/filekinds.yml");
-// Text render engine — same env knob the loader reads (src/content.config.ts).
-const renderer = (process.env.SUBFOLIO_TEXT_RENDERING ?? "markdown") as Renderer;
+// Text render engine — same validated setting the loader reads (src/lib/textRendering.ts).
+const renderer = textRenderer;
 
 type RouteProps =
   | { kind: "folder"; entry: FolderEntry }

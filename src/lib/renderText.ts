@@ -3,10 +3,11 @@
  * (`engine/application/helpers/MY_format.php`).
  *
  * Upstream switched on a global `text_rendering` setting (none|textile|markdown),
- * auto-linked bare URLs, then rendered. Phase 5 decision: **Markdown only** — the
- * remark/unified stack is already a dependency, and Textile has no maintained JS
- * port. A `textile` selector falls back to `none` with a build warning so existing
- * config doesn't break the build.
+ * auto-linked bare URLs, then rendered. All three are supported here:
+ * - `markdown` — the remark/unified stack (Phase 5).
+ * - `textile`  — `textile-js` (MIT), the JS port of the Textile 2 syntax that
+ *   upstream's bundled PHP-Textile 2.5.1 (`vendor/classTextile.php`) implements.
+ * - `none`     — escaped plain text with live links.
  *
  * Used by the `.txt` detail view (`fileHelpers.ts` → `body`) and position text
  * embeds (`listing/InlineEmbeds.astro`).
@@ -18,6 +19,7 @@ import remarkSmartypants from "remark-smartypants";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
+import textile from "textile-js";
 
 export type Renderer = "none" | "textile" | "markdown";
 
@@ -57,13 +59,247 @@ function autoLinkUrls(escaped: string): string {
   );
 }
 
-let warnedTextile = false;
+// --- Textile ------------------------------------------------------------------
+
+/** Just enough of the hast node shape for the text walk below. */
+type HastNode = {
+  type: string;
+  tagName?: string;
+  value?: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
+};
+
+/** Elements whose text keeps its literal characters: code and raw text. */
+const NO_GLYPHS = new Set(["pre", "code", "script", "style", "textarea"]);
+
+/** Elements whose text is never auto-linked: existing links, code, raw text. */
+const NO_AUTOLINK = new Set(["a", "pre", "code", "kbd", "samp", "script", "style", "textarea"]);
+
+/** One Unicode word character, as PHP-Textile's `$wrd` snippet matches it. */
+const WRD = "[\\p{L}\\p{M}\\p{N}\\p{Pc}]";
+
+/**
+ * Typography: upstream's PHP-Textile 2.5.1 glyph table (`vendor/classTextile.php`
+ * prepGlyphs()) is the target. textile-js already matches it for ` - ` → en dash,
+ * `...` → ellipsis, (c) (r) (tm), curly quotes and most apostrophes. These rules
+ * cover where textile-js differs. They run on text nodes after textile-js,
+ * outside code and <pre> (PHP-Textile shelves those before glyphs).
+ */
+const PHP_GLYPH_GAPS: [RegExp, string][] = [
+  // Em dash: PHP converts every `--` (/--/); textile-js only between words or spaces.
+  [/--/g, "—"],
+  // Primes: textile-js turns 5' and 6'2" into ′ and ″; PHP has no prime rule, so
+  // its closing-quote and apostrophe rules give ’ and ”.
+  [/(\d)′/g, "$1’"],
+  [/(\d)″/g, "$1”"],
+  // "Back in '88", "the '90s": an apostrophe, not an opening quote.
+  // PHP: /(\s)'(\d+$wrd?)\b(?![.]?[$wrd]*?')/ → $1&#8217;$2
+  [new RegExp(`(\\s)‘(\\d+${WRD}?)(?!${WRD})(?!\\.?${WRD}*?’)`, "gu"), "$1’$2"],
+  // Apostrophe after a closing paren, "(Subfolio)'s". PHP: /($wrd|\))'($wrd)/
+  [new RegExp(`\\)‘(${WRD})`, "gu"), ")’$1"],
+  // Dimension sign with a capital X ("3 X 4"); textile-js only converts lowercase x.
+  // PHP: /([0-9]+[\])]?['"]? ?)[xX]( ?[\[(]?)(?=[+-]?[0-9]*\.?[0-9]+)/
+  [/(\d+[\])]?['"’”]? ?)X( ?[[(]?)(?=[+-]?\d*\.?\d+)/g, "$1×$2"],
+  // Trademark in mixed case, "(Tm)". PHP: /(\b ?|\s|^)[([]TM[])]/i
+  [/(\b ?|\s|^)[([]tm[\])]/gi, "$1™"],
+  // Fractions, degrees, plus-minus: textile-js converts only the first of each
+  // in a run of text; PHP converts every one, with ( ) or [ ].
+  [/[([]1\/4[\])]/g, "¼"],
+  [/[([]1\/2[\])]/g, "½"],
+  [/[([]3\/4[\])]/g, "¾"],
+  [/[([]o[\])]/g, "°"],
+  [/[([]\+\/-[\])]/g, "±"],
+];
+
+function phpGlyphGaps(value: string): string {
+  let out = value;
+  for (const [pattern, replacement] of PHP_GLYPH_GAPS) out = out.replace(pattern, replacement);
+  return out;
+}
+
+/**
+ * A bare URL in body text. Same schemes as upstream `text::auto_link_urls`
+ * (http/https/ftp/ftps). The last character can't be closing punctuation, a
+ * quote, or a Textile phrase marker, so "see http://x.com." links
+ * `http://x.com` and `*http://x.com*` stays bold.
+ */
+const BARE_URL = /\b(?:https?|ftps?):\/\/[^\s<>"“”‘’]*[^\s<>"“”‘’'.,;:!?)\]*_@+^~%=|-]/g;
+
+/**
+ * A bare URL Textile doesn't own. Skipped when it follows `:` (the target of
+ * `"text":url` or `!img!:url`), `!` / `!<` / `!>` / `!=` (an `!image!` source),
+ * `)` `}` `]` (an image after attribute modifiers, or a `[alias]url` link
+ * definition), or `=` (an unquoted HTML attribute).
+ */
+const PROTECTED_URL = new RegExp(`(?<![:!=)}\\]]|![<>=])${BARE_URL.source}`, "g");
+
+/** `->` that isn't the end of an HTML comment. textile-js makes it →; PHP doesn't. */
+const ARROW = /(?<!-)->/g;
+
+/**
+ * Placeholder for text set aside from textile-js: an index between two Private
+ * Use Area characters, which no textile-js rule matches. Built with
+ * fromCharCode so the source holds no invisible characters.
+ */
+const TOKEN_OPEN = String.fromCharCode(0xe000);
+const TOKEN_CLOSE = String.fromCharCode(0xe001);
+const TOKEN = new RegExp(`${TOKEN_OPEN}(\\d+)${TOKEN_CLOSE}`, "g");
+const BOM = new RegExp(`^${String.fromCharCode(0xfeff)}`);
+
+/** A set-aside piece of source: a bare URL (linked later) or literal text. */
+type Piece = { text: string; url: boolean };
+
+/** Swap bare URLs and `->` for placeholders before Textile runs. */
+function setAside(source: string): { text: string; pieces: Piece[] } {
+  const pieces: Piece[] = [];
+  const hold = (text: string, url: boolean) => `${TOKEN_OPEN}${pieces.push({ text, url }) - 1}${TOKEN_CLOSE}`;
+  const text = source
+    .replace(PROTECTED_URL, (url) => hold(url, true))
+    .replace(ARROW, (arrow) => hold(arrow, false));
+  return { text, pieces };
+}
+
+/** Put the original text back into a string (attribute values, comments). */
+function restore(value: string, pieces: Piece[]): string {
+  return value.replace(TOKEN, (token, i: string) => pieces[Number(i)]?.text ?? token);
+}
+
+function anchorFor(url: string): HastNode {
+  return {
+    type: "element",
+    tagName: "a",
+    properties: { href: url, target: "_blank" },
+    children: [{ type: "text", value: url }],
+  };
+}
+
+/** Split one text run into text + `<a target="_blank">` nodes. */
+function linkifyText(value: string): HastNode[] {
+  const out: HastNode[] = [];
+  let last = 0;
+  for (const match of value.matchAll(BARE_URL)) {
+    const url = match[0];
+    const at = match.index ?? 0;
+    if (at > last) out.push({ type: "text", value: value.slice(last, at) });
+    out.push(anchorFor(url));
+    last = at + url.length;
+  }
+  if (out.length === 0) return [{ type: "text", value }];
+  if (last < value.length) out.push({ type: "text", value: value.slice(last) });
+  return out;
+}
+
+/**
+ * One text node → nodes. Placeholders go back as typed: a URL becomes a link
+ * (plain text where links aren't allowed), `->` stays `->`. The text between
+ * them gets the PHP glyph rules and, as a fallback, links for any bare URL
+ * that wasn't set aside.
+ */
+function renderTextValue(value: string, pieces: Piece[], glyphs: boolean, links: boolean): HastNode[] {
+  const out: HastNode[] = [];
+  const pushText = (text: string) => {
+    if (!text) return;
+    const styled = glyphs ? phpGlyphGaps(text) : text;
+    if (links) out.push(...linkifyText(styled));
+    else out.push({ type: "text", value: styled });
+  };
+  let last = 0;
+  for (const match of value.matchAll(TOKEN)) {
+    const at = match.index ?? 0;
+    pushText(value.slice(last, at));
+    const piece = pieces[Number(match[1])];
+    if (!piece) out.push({ type: "text", value: match[0] });
+    else if (piece.url && links) out.push(anchorFor(piece.text));
+    else out.push({ type: "text", value: piece.text });
+    last = at + match[0].length;
+  }
+  pushText(value.slice(last));
+  return out;
+}
+
+/**
+ * Walk the tree once: put set-aside text back everywhere (text, attributes,
+ * comments), apply the PHP glyph rules outside NO_GLYPHS, and link URLs
+ * outside NO_AUTOLINK.
+ */
+function transformText(node: HastNode, pieces: Piece[], glyphs: boolean, links: boolean): void {
+  if (!node.children) return;
+  const next: HastNode[] = [];
+  for (const child of node.children) {
+    if (child.type === "text") {
+      next.push(...renderTextValue(child.value ?? "", pieces, glyphs, links));
+      continue;
+    }
+    if (child.type === "comment" && child.value) {
+      child.value = restore(child.value, pieces);
+    }
+    if (child.properties) {
+      for (const [key, prop] of Object.entries(child.properties)) {
+        if (typeof prop === "string") child.properties[key] = restore(prop, pieces);
+        else if (Array.isArray(prop)) {
+          child.properties[key] = prop.map((p) => (typeof p === "string" ? restore(p, pieces) : p));
+        }
+      }
+    }
+    const tag = child.type === "element" ? (child.tagName ?? "") : "";
+    transformText(child, pieces, glyphs && !NO_GLYPHS.has(tag), links && !NO_AUTOLINK.has(tag));
+    next.push(child);
+  }
+  node.children = next;
+}
+
+/**
+ * Textile HTML → parsed (parse5, via rehype-raw) → serialized.
+ * Re-parsing applies the markdown path's raw-HTML policy: block HTML in the
+ * source passes through (trusted author content) but comes out well-formed, so
+ * an unclosed tag in one text file can't swallow the rest of the page.
+ */
+const textileHtmlProcessor = unified().use(rehypeRaw).use(rehypeStringify);
+
+type HtmlTree = Parameters<typeof textileHtmlProcessor.runSync>[0];
+
+/**
+ * Textile, with bare URLs set aside before it runs and linked after.
+ *
+ * Upstream ran `text::auto_link_urls()` on the raw source BEFORE Textile
+ * (`MY_format.php:52`). That kept URLs away from Textile's typography, but it
+ * also rewrote the URL half of `"text":http://…` links and `!http://…!` images
+ * into `<a>` tags, so Textile no longer saw them as links or images. Setting
+ * aside only the URLs Textile doesn't own keeps both: `800x600` or `--` inside a
+ * URL stays as typed, and Textile links and images still work.
+ */
+function renderTextile(raw: string): string {
+  // Upstream PHP-Textile's cleanWhiteSpace() strips a UTF-8 byte-order mark;
+  // textile-js doesn't, and a BOM in front of `h1.` stops it being a heading.
+  // Trailing blank lines are trimmed: textile-js turns them into an empty <p>.
+  const source = raw.replace(BOM, "").trimEnd();
+  const { text, pieces } = setAside(source);
+  let html: string;
+  try {
+    html = textile(text);
+  } catch (err) {
+    // Lenient like the rest of the loader: one bad file must not fail the build.
+    // Loud, never silent: say which text fell back.
+    console.warn(
+      `[renderText] Textile failed (${(err as Error).message}); rendering this text as plain text: ` +
+        JSON.stringify(source.slice(0, 60)),
+    );
+    return renderText(raw, "none");
+  }
+  // A root holding one raw node is how remark-rehype hands raw HTML to rehype-raw.
+  const rawTree = { type: "root", children: [{ type: "raw", value: html }] } as unknown as HtmlTree;
+  const tree = textileHtmlProcessor.runSync(rawTree);
+  transformText(tree as unknown as HastNode, pieces, true, true);
+  return textileHtmlProcessor.stringify(tree);
+}
 
 /**
  * Render a raw text body to HTML per the configured renderer.
  * - `markdown`: full GFM pipeline.
+ * - `textile`: Textile 2 (headings, p., bq., lists, phrase markup, links,
+ *   images, line breaks, block HTML). Unknown syntax stays as literal text.
  * - `none`: escape + auto-link + paragraph-wrap (plain text, links live).
- * - `textile`: not supported in the JS port → falls back to `none` once-warned.
  */
 export function renderText(raw: string, renderer: Renderer): string {
   if (!raw || !raw.trim()) return "";
@@ -72,14 +308,16 @@ export function renderText(raw: string, renderer: Renderer): string {
     return String(markdownProcessor.processSync(raw));
   }
 
-  if (renderer === "textile" && !warnedTextile) {
-    warnedTextile = true;
-    console.warn(
-      "[renderText] Textile is not supported in the Astro port; rendering as plain text. " +
-        "Set SUBFOLIO_TEXT_RENDERING=markdown.",
-    );
+  if (renderer === "textile") {
+    return renderTextile(raw);
   }
 
-  // `none` (and the textile fallback): plain text, escaped, bare URLs linked.
+  // Never fall through to plain text for a value that isn't `none`; the setting
+  // is validated in src/lib/textRendering.ts, so this only catches a bad caller.
+  if (renderer !== "none") {
+    throw new Error(`renderText: unknown renderer ${JSON.stringify(renderer)}`);
+  }
+
+  // `none`: plain text, escaped, bare URLs linked.
   return `<p>${autoLinkUrls(escapeHtml(raw)).replace(/\n{2,}/g, "</p>\n<p>").replace(/\n/g, "<br>\n")}</p>`;
 }

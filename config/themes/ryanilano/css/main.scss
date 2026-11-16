@@ -241,7 +241,12 @@ body {
 }
 
 /* Two columns: copy left, Role/Medium bullets right. overflow:hidden on the
-   figcaption contains the floats so the images below start underneath. */
+   figcaption contains the floats so the images below start underneath. The
+   2015 reset zeroed <figure>'s UA margin (40px each side); without it the
+   columns start indented and come out 80px narrower. */
+#content .project-header figure {
+  margin: 0;
+}
 #content .project-copy {
   overflow: hidden;
 }
@@ -250,6 +255,7 @@ body {
   width: 50%;
 }
 #content .project-header .column p {
+  color: #333;
   font-size: 17.92px;
   line-height: 25.088px;
   margin: 0 0 10px;
@@ -260,6 +266,7 @@ body {
   padding: 0;
 }
 #content .project-header .column ul li {
+  color: #333;
   font-size: 17.92px;
   line-height: 25.088px;
   margin: 0 0 0 20px;

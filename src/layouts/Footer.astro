@@ -20,12 +20,18 @@ const {
   displayUpdatedSince = true,
   copyright: copy = siteConfig.site_copyright || "",
 } = Astro.props;
+
+// Optional credit line (settings.yml `site_footer_credit`). Trusted HTML: it is
+// the site author's own config file, same trust model as text embeds.
+const credit = siteConfig.site_footer_credit || "";
 ---
 
 <footer class="footer" id="footer">
   <div class="footer__copyright">
     {displayCopyright && copy && <span class="copyright__text">{copy}</span>}
   </div>
+
+  {credit && <div class="footer__credit" set:html={credit} />}
 
   {
     displayUpdatedSince && (
@@ -40,3 +46,25 @@ const {
     )
   }
 </footer>
+
+<style>
+  /* Right-aligned credit, mirroring .footer__copyright's float-left. Stacks
+     under the copyright on narrow screens instead of crowding it. */
+  .footer__credit {
+    float: right;
+    text-align: right;
+  }
+  .footer__credit :global(a) {
+    padding: 0;
+    color: inherit;
+    text-decoration: underline;
+  }
+  @media (max-width: 639px) {
+    .footer__credit {
+      float: none;
+      clear: both;
+      text-align: left;
+      padding: 0 5px 20px;
+    }
+  }
+</style>

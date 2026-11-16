@@ -94,11 +94,11 @@ markup was inlined into the page.
 - An SVG is only ever shown through `<img>` (detail view, embeds) or as a rasterized
   PNG thumbnail (gallery), never inlined. Browsers run no scripts and load no external
   files for an SVG shown through `<img>`.
-- Consequence: an SVG that links its images by file name (Illustrator's "Link" option,
-  e.g. `href="k2-darko-boot-blueprint-1.png"`) shows without those images on its detail
-  page. On Ryan's 2025 K2 blueprint that is a strap pattern, a badge texture and a panel
-  highlight, about 0.1% of the pixels. Its gallery thumbnail does include them, because sharp rasterizes it with the
-  linked files beside it. Export with images embedded to show the same thing in both.
+- Consequence: an SVG that links its images by file name (for example an Illustrator SVG
+  with linked PNGs, `href="drawing-1.png"`) shows without those images on its detail
+  page. In a typical drawing that is a few textures or small details. Its gallery
+  thumbnail does include them, because sharp rasterizes it with the linked files beside
+  it. Export with images embedded to show the same thing in both.
 - Thumbnails for both formats use a PNG base file; see SPEC-thumbnails §3.6.
 - og:image is always PNG/JPEG/GIF. A custom thumbnail keeps its source's format, so for an SVG
   or WebP source with one, og:image uses the PNG gen-thumbs made for that source

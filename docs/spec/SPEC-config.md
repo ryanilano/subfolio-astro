@@ -171,6 +171,9 @@ the view template).  The value is a map with the following fields:
 | `rss` | `rss` | `txt` | RSS Feed | No |
 | `webloc` | `webloc` | `net` | Web Location | No |
 
+Astro port: the bundled `config/filekinds.yml` adds `webp` and `svg` to `img`
+(`gif, png, jpg, webp, svg`). Why and how they display: SPEC-filekinds §2.
+
 Note: `net` appears twice in the `link` kind extensions list in the sample YAML — this
 is a duplicate bug in the original data.  The Go loader should de-duplicate extensions
 when building the extension→kind index.

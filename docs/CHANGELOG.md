@@ -7,6 +7,16 @@ PHP app on the same content fixture.
 
 ## [Unreleased]
 
+### Added
+
+- **SVG and WebP display as images.** Both were missing from `config/filekinds.yml`,
+  so they showed a download box, and a `-t-` SVG embed was read as text and its markup
+  inlined into the page. They are now `img` files: image detail view, gallery
+  thumbnails (PNG base + WebP/AVIF siblings; SVGs rasterized by sharp) and image
+  embeds. SVGs are only shown through `<img>`, so their scripts never run. Output for
+  sites without SVG/WebP files is unchanged. Details in
+  [SPEC-filekinds §2](spec/SPEC-filekinds.md#2-kind-table).
+
 ### Fixed
 
 - **03 Featuring Content: feature cards no longer crop the title/description under

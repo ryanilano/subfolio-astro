@@ -25,11 +25,14 @@ import { readdirSync, statSync, mkdirSync, writeFileSync, rmSync } from "node:fs
 import { resolve, join, dirname, basename } from "node:path";
 import { loadSettings } from "../src/loaders/settings.ts";
 import { asNumber } from "../src/loaders/yaml.ts";
+import { autoThumbName } from "../src/lib/thumbName.ts";
 
 // --- Config (SPEC-thumbnails §3.2, §3.10) -------------------------------
 const THUMB_WIDTH = 320;
 const THUMB_HEIGHT = 240;
-const IMG_EXTS = new Set([".gif", ".png", ".jpg", ".jpeg"]);
+// .webp and .svg: sharp reads both. Their base thumbnail is written as PNG (see
+// src/lib/thumbName.ts); an SVG is rasterized, never copied as markup.
+const IMG_EXTS = new Set([".gif", ".png", ".jpg", ".jpeg", ".webp", ".svg"]);
 const LISTING_MODE = process.env.SUBFOLIO_LISTING_MODE ?? "list";
 
 // Custom-thumbnail directory names: canonical (SPEC §3.5) + legacy fixture spelling.
@@ -185,7 +188,8 @@ async function genOne(relPath) {
   const name = basename(relPath);
   const absSource = join(contentRoot, relPath);
 
-  const thumbRel = parent === "." ? `-thumbnails/${name}` : `${parent}/-thumbnails/${name}`;
+  const thumbName = autoThumbName(name);
+  const thumbRel = parent === "." ? `-thumbnails/${thumbName}` : `${parent}/-thumbnails/${thumbName}`;
   const absThumb = join(cacheRoot, thumbRel);
 
   const srcStat = statSync(absSource);
@@ -221,7 +225,8 @@ async function genOne(relPath) {
 
   mkdirSync(dirname(absThumb), { recursive: true, mode: 0o755 });
 
-  // Base thumbnail (original format) + WebP + AVIF siblings (same resize pipeline).
+  // Base thumbnail (original format; PNG for SVG/WebP sources, from the .png
+  // name autoThumbName gave it) + WebP + AVIF siblings (same resize pipeline).
   await Promise.all([
     sharp(absSource).resize(resizeOpts).toFile(absThumb),
     sharp(absSource).resize(resizeOpts).webp({ quality: 80 }).toFile(absThumb + ".webp"),

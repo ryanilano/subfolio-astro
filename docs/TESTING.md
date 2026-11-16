@@ -4,7 +4,8 @@ A systematic walkthrough of the bundled fixture (`content/examples/`) to verify
 every naming convention renders correctly.
 
 > **Automated coverage now exists** and gates the Cloudflare deploy: the
-> structural smoke suite (`npm run test` → `tests/smoke.*.test.mjs`), SEO head
+> structural smoke suite (`npm run test` → `tests/smoke.*.test.mjs`, plus the
+> no-build unit tests in `tests/unit.*.test.mjs`), SEO head
 > (`npm run test:seo`), `<picture>`/originals (`tests/picture.test.mjs`), perf
 > budgets (`npm run test:perf`, warn-posture) and axe/contrast
 > (`npm run test:a11y`). Many rows below are covered structurally by those

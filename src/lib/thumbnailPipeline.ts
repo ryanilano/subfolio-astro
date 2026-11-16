@@ -16,6 +16,7 @@
  */
 import { readdir, stat } from "node:fs/promises";
 import { resolve, dirname, basename } from "node:path";
+import { autoThumbName } from "./thumbName.ts";
 
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 const cacheRoot = resolve(process.env.SUBFOLIO_THUMB_CACHE ?? "./.thumb-cache");
@@ -170,11 +171,13 @@ export async function thumbnailFor(
 
   // 2. Pre-generated auto thumbnail (lives in the cache). Use its ctime as the
   //    cache-buster, mirroring PHP's ?rnd={ctime} (SPEC §3.6).
-  const thumbRel = parentDir === "." ? `-thumbnails/${name}` : `${parentDir}/-thumbnails/${name}`;
+  // SVG/WebP sources have a PNG base thumbnail (`logo.svg.png`) — src/lib/thumbName.ts.
+  const thumbName = autoThumbName(name);
+  const thumbRel = parentDir === "." ? `-thumbnails/${thumbName}` : `${parentDir}/-thumbnails/${thumbName}`;
   try {
     const st = await stat(resolve(cacheRoot, thumbRel));
     const rnd = Math.floor(st.ctimeMs);
-    const base = `${import.meta.env.BASE_URL}directory/${encParent}-thumbnails/${encodeURIComponent(name)}`;
+    const base = `${import.meta.env.BASE_URL}directory/${encParent}-thumbnails/${encodeURIComponent(thumbName)}`;
     const url = `${base}?rnd=${rnd}`;
 
     // Modern-format siblings (Phase C). gen-thumbs.mjs writes `<name>.webp` /

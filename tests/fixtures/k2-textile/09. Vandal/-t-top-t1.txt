@@ -1,0 +1,14 @@
+h1. Vandal
+
+h4. High school skateboarder, cool kid, probably smokes but mom still pays for his clothes.
+
+<!-- <div class='columns3'><h4>T1 Speedlace</h4>super tech/clean aesthetic, junya watanabe style shit, nasa flavor
+
+<h4>T1</h4>All black classy leather.
+
+<h4>T1 (Colorway 2)</h4>super pop color but classy.
+</div> -->
+
+
+
+

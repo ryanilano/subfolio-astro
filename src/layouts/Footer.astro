@@ -53,8 +53,13 @@ const credit = siteConfig.site_footer_credit || "";
   .footer__credit {
     float: right;
     text-align: right;
+    line-height: 70px; /* matches the theme's 70px footer link boxes */
   }
+  /* The theme makes footer links 70px inline-blocks; inside running text
+     they must be plain inline links or each one forces its own tall line. */
   .footer__credit :global(a) {
+    display: inline;
+    height: auto;
     padding: 0;
     color: inherit;
     text-decoration: underline;

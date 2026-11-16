@@ -64,7 +64,9 @@ const credit = siteConfig.site_footer_credit || "";
       float: none;
       clear: both;
       text-align: left;
-      padding: 0 5px 20px;
+      /* The footer's 70px line box suits one line; wrapped text needs normal leading. */
+      line-height: 1.5;
+      padding: 0 5px 24px;
     }
   }
 </style>

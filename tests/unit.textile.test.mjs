@@ -4,9 +4,9 @@
  * Unlike the smoke suite these need no build: they import src/lib/renderText.ts
  * directly (Node strips the TypeScript types on import) and check the HTML it
  * returns. One test per Textile construct original Subfolio content uses, then
- * the four real K2 text embeds in tests/fixtures/k2-textile/ (copied verbatim
- * from Ryan's 2011 K2 working folder, except one phrase removed from the
- * commented-out draft in 09. Vandal; the test doesn't depend on it).
+ * the sample text embeds in tests/fixtures/textile-samples/: synthetic files
+ * shaped like real Subfolio embeds (headings with a spaced hyphen and an all-caps
+ * word, trailing blank lines, a commented-out HTML draft, mixed blocks).
  *
  * Run:  node --test tests/unit.textile.test.mjs   (also part of `npm run test`)
  */
@@ -21,7 +21,7 @@ const tx = (src) => renderText(src, "textile");
 // A UTF-8 byte-order mark, built here so the source holds no invisible character.
 const BOM = String.fromCharCode(0xfeff);
 const fixture = (rel) =>
-  readFileSync(fileURLToPath(new URL(`./fixtures/k2-textile/${rel}`, import.meta.url)), "utf8");
+  readFileSync(fileURLToPath(new URL(`./fixtures/textile-samples/${rel}`, import.meta.url)), "utf8");
 
 // --- Block modifiers ---------------------------------------------------------
 
@@ -82,13 +82,13 @@ test("!image! and !image(alt)!:link render images", () => {
 // --- Typography: upstream PHP-Textile 2.5.1 glyph table (classTextile.php:646-659) --
 
 test("glyphs: spaced hyphen → en dash, double hyphen → em dash", () => {
-  assert.equal(tx("Darko - Skate Style"), "<p>Darko – Skate Style</p>"); // U+2013
+  assert.equal(tx("Field Notes - Summer Edition"), "<p>Field Notes – Summer Edition</p>"); // U+2013
   assert.equal(tx("Draft--final and Draft -- final"), "<p>Draft—final and Draft — final</p>"); // U+2014
 });
 
 test("glyphs: curly quotes and apostrophes, incl. Back in '88", () => {
   assert.equal(tx(`"Double" and 'single'`), "<p>“Double” and ‘single’</p>");
-  assert.equal(tx("It's Ryan's board"), "<p>It’s Ryan’s board</p>");
+  assert.equal(tx("It's the team's board"), "<p>It’s the team’s board</p>");
   // PHP rule /(\s)'(\d+$wrd?)\b/ → apostrophe; a quoted '90s' stays a quote pair.
   assert.equal(tx("Back in '88 and the '90s"), "<p>Back in ’88 and the ’90s</p>");
   assert.equal(tx("the '90s' sound"), "<p>the ‘90s’ sound</p>");
@@ -96,7 +96,7 @@ test("glyphs: curly quotes and apostrophes, incl. Back in '88", () => {
 
 test("glyphs: ellipsis, (c) (r) (tm)", () => {
   assert.equal(tx("Wait for it..."), "<p>Wait for it…</p>");
-  assert.equal(tx("Copyright (c) 2011"), "<p>Copyright © 2011</p>");
+  assert.equal(tx("Copyright (c) 2020"), "<p>Copyright © 2020</p>");
   assert.equal(tx("Brand(r) and Name(tm) and Name (TM)"), "<p>Brand® and Name™ and Name ™</p>");
 });
 
@@ -125,7 +125,7 @@ test("glyphs leave code and <pre> literal", () => {
 test("the dash-to-space naming rule never touches body text", () => {
   // replace_dash_space applies to listing names only (listingHelpers.ts);
   // hyphens inside words in a text body stay hyphens.
-  assert.equal(tx("pre-2011 well-known file-name"), "<p>pre-2011 well-known file-name</p>");
+  assert.equal(tx("pre-2020 well-known file-name"), "<p>pre-2020 well-known file-name</p>");
 });
 
 // --- Bare URLs (upstream text::auto_link_urls) --------------------------------
@@ -214,9 +214,9 @@ test("empty and whitespace-only bodies render nothing", () => {
 // --- The other renderers are untouched ----------------------------------------
 
 test("none and markdown keep their own output for the same source", () => {
-  const src = "h1. Darko - Skate Style";
-  assert.equal(renderText(src, "none"), "<p>h1. Darko - Skate Style</p>");
-  assert.equal(renderText(src, "markdown"), "<p>h1. Darko - Skate Style</p>");
+  const src = "h1. Field Notes - Summer Edition";
+  assert.equal(renderText(src, "none"), "<p>h1. Field Notes - Summer Edition</p>");
+  assert.equal(renderText(src, "markdown"), "<p>h1. Field Notes - Summer Edition</p>");
 });
 
 // --- The SUBFOLIO_TEXT_RENDERING setting (src/lib/textRendering.ts) ---------------
@@ -251,37 +251,58 @@ test("renderText refuses an unknown renderer instead of rendering plain text", (
   assert.throws(() => renderText("h1. Title", "txtile"), /unknown renderer/);
 });
 
-// --- Real content: Ryan's 2011 K2 folder --------------------------------------
+// --- Sample text embeds (tests/fixtures/textile-samples/) ----------------------------
 
-test("K2 01. Darko: the top embed is a heading, not literal h1.", () => {
-  assert.equal(tx(fixture("01. Darko/-t-top-darko.txt")), "<h1>Darko – Skate Style</h1>");
+test("sample: an h1. heading embed renders a heading, not literal h1.", () => {
+  // Trailing blank lines, as embed files often have, add nothing.
+  assert.equal(tx(fixture("heading-dash.txt")), "<h1>Field Notes – Summer Edition</h1>");
 });
 
-test("K2 04. T1 Speedlace theme board matches the 2011 Subfolio page", () => {
-  // Ryan's screenshot of the original 2011 page shows a real h1 reading
-  // "T1 Speedlace – Super Tech, Clean, NASA Aesthetic" (en dash).
-  const html = tx(fixture("04. T1 Speedlace/00-Themes+Inspiration/-t-top-t1speedlace.txt"));
+test("sample: spaced hyphen → en dash and an all-caps word → caps span, as PHP Textile did", () => {
+  const html = tx(fixture("heading-caps.txt"));
   // PHP-Textile also wraps 3+ capitals in <span class="caps">; neither theme styles it.
-  assert.equal(html, '<h1>T1 Speedlace – Super Tech, Clean, <span class="caps">NASA</span> Aesthetic</h1>');
-  assert.equal(html.replace(/<[^>]+>/g, ""), "T1 Speedlace – Super Tech, Clean, NASA Aesthetic");
+  assert.equal(html, '<h1>Studio Kit – Clean, Simple, <span class="caps">HTML</span> Ready</h1>');
+  assert.equal(html.replace(/<[^>]+>/g, ""), "Studio Kit – Clean, Simple, HTML Ready");
 });
 
-test("K2 08. Curfew Colorway 2: double space after the dash is kept", () => {
-  assert.equal(
-    tx(fixture("08. Curfew Colorway 2/-t-top-curfewC2.txt")),
-    "<h1>Curfew Colorway 2 –  Skate Style, Super Pop</h1>",
-  );
+test("sample: a double space after the dash is kept", () => {
+  assert.equal(tx(fixture("heading-double-space.txt")), "<h1>Sample Board –  Second Draft, Bold Color</h1>");
 });
 
-test("K2 09. Vandal: h1 + h4, and the commented-out column draft stays hidden", () => {
-  const html = tx(fixture("09. Vandal/-t-top-t1.txt"));
+test("sample: h1 + h4, and a commented-out HTML draft stays hidden", () => {
+  const html = tx(fixture("draft-comment.txt"));
   assert.ok(
     html.startsWith(
-      "<h1>Vandal</h1>\n<h4>High school skateboarder, cool kid, probably smokes but mom still pays for his clothes.</h4>\n<!--",
+      "<h1>Sample Board</h1>\n<h4>A short subtitle that explains the board in one line.</h4>\n<!--",
     ),
     html,
   );
   assert.ok(html.endsWith("-->"), "comment must close the output; nothing after it");
   const visible = html.replace(/<!--[\s\S]*?-->/g, "");
-  assert.doesNotMatch(visible, /T1 Speedlace|columns3/, "the commented draft must not render");
+  assert.doesNotMatch(visible, /Option A|columns3/, "the commented draft must not render");
+});
+
+test("sample: paragraphs, block HTML, a link, an image, a quote and lists", () => {
+  assert.equal(
+    tx(fixture("mixed-blocks.txt")),
+    [
+      "<h2>Overview</h2>",
+      "<p>A plain paragraph with <strong>strong</strong> and <em>emphasis</em>.</p>",
+      "<p>Another paragraph<br>",
+      "with a line break.</p>",
+      '<div class="note"><p>Block <span class="caps">HTML</span> passes through.</p></div>',
+      '<p>See <a href="https://example.com/docs">the docs</a> and <img src="https://example.com/pic.png" title="A sample picture" alt="A sample picture">.</p>',
+      "<blockquote>",
+      "<p>A quoted line.</p>",
+      "</blockquote>",
+      "<ul>",
+      "\t<li>First point</li>",
+      "\t<li>Second point</li>",
+      "</ul>",
+      "<ol>",
+      "\t<li>Step one</li>",
+      "\t<li>Step two</li>",
+      "</ol>",
+    ].join("\n"),
+  );
 });

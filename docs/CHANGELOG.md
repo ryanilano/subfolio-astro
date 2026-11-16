@@ -11,7 +11,7 @@ PHP app on the same content fixture.
 
 - **Textile text rendering.** `SUBFOLIO_TEXT_RENDERING=textile` now renders Textile
   instead of falling back to plain text with a warning, so folders written for
-  original Subfolio (which defaulted to Textile) show `h1. Darko - Skate Style` as a
+  original Subfolio (which defaulted to Textile) show `h1. Field Notes - Summer Edition` as a
   heading. Uses `textile-js` 2.1.1 (MIT). Covers headings, `p.`, `bq.`, lists,
   `*strong*`, `_em_`, links, images, line breaks and block HTML, with PHP-Textile's
   typography (` - ` → en dash, `--` → em dash, curly quotes, `...` → ellipsis,

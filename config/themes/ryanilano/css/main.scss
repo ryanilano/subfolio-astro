@@ -295,7 +295,10 @@ body {
     font-size: 30.72px;
     line-height: 30.72px;
   }
-  #content .project-header .column p {
+  /* 2015 shrank only the paragraph here, leaving the bullets a size larger;
+     step both down together so the two columns stay one size. */
+  #content .project-header .column p,
+  #content .project-header .column ul li {
     font-size: 14.336px;
     line-height: 20.07px;
   }

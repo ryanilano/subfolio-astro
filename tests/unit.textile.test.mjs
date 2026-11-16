@@ -5,7 +5,8 @@
  * directly (Node strips the TypeScript types on import) and check the HTML it
  * returns. One test per Textile construct original Subfolio content uses, then
  * the four real K2 text embeds in tests/fixtures/k2-textile/ (copied verbatim
- * from Ryan's 2011 K2 working folder).
+ * from Ryan's 2011 K2 working folder, except one phrase removed from the
+ * commented-out draft in 09. Vandal; the test doesn't depend on it).
  *
  * Run:  node --test tests/unit.textile.test.mjs   (also part of `npm run test`)
  */

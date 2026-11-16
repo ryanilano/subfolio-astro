@@ -13,8 +13,9 @@ PHP app on the same content fixture.
   instead of falling back to plain text with a warning, so folders written for
   original Subfolio (which defaulted to Textile) show `h1. Darko - Skate Style` as a
   heading. Uses `textile-js` 2.1.1 (MIT). Covers headings, `p.`, `bq.`, lists,
-  `*strong*`, `_em_`, links, images, line breaks and block HTML; unknown syntax stays
-  literal text. `markdown` and `none` output is unchanged. Details in
+  `*strong*`, `_em_`, links, images, line breaks and block HTML, with PHP-Textile's
+  typography (` - ` → en dash, `--` → em dash, curly quotes, `...` → ellipsis,
+  (c) (r) (tm)); unknown syntax stays literal text. `markdown` and `none` output is unchanged. Details in
   [SPEC-config §2a](spec/SPEC-config.md#2a-text_rendering-in-the-astro-port).
 
 ### Fixed

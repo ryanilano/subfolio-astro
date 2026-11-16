@@ -107,7 +107,9 @@ all covered by `tests/unit.textile.test.mjs`:
 
 - Blocks: `h1.` to `h6.`, `p.`, `bq.`, `*` bulleted and `#` numbered lists (nested with `**`, `##`), blank line = new paragraph, single newline = `<br>`.
 - Phrases: `*strong*`, `_em_`, `"link text":url`, `!image.png!`, `!image.png(alt)!:link`.
-- Typography, as PHP-Textile does it: ` - ` → en dash, `--` → em dash, curly quotes, 3+ capitals wrapped in `<span class="caps">`.
+- Typography follows PHP-Textile's glyph table (`classTextile.php:646-659`, rules in `prepGlyphs()`): ` - ` → en dash, `--` → em dash, curly quotes and apostrophes (`'88` → ’88, `6'2"` → 6’2”), `...` → ellipsis, (c) (r) (tm), `10 x 20` / `3 X 4` → ×, (1/2) or [1/2] → ½, (o) → °, (+/-) → ±. 3+ capitals are wrapped in `<span class="caps">`, which neither theme styles. Code and `<pre>` stay literal. Example: Ryan's 2011 `04. T1 Speedlace` theme board heading renders as "T1 Speedlace – Super Tech, Clean, NASA Aesthetic", same as the original page.
+- Where textile-js's own glyph rules differ from PHP's, a pass after it applies PHP's rule: every `--` (textile-js needs letters or spaces around it), no prime marks (textile-js makes `5'` ′), `->` left as typed (textile-js makes it →), `'88`, `(Subfolio)'s`, capital `X`, mixed-case `(Tm)`, and every fraction or degree sign rather than only the first.
+- The dash-to-space naming option (`replace_dash_space`) changes listing names only. It never touches text bodies.
 - Raw HTML: same trust policy as the markdown path. Block HTML passes through, then the output is re-parsed (rehype-raw) so it is always well-formed. HTML comments stay comments, even across blank lines.
 - Unknown syntax (`h7.`, `foo.`, an unpaired `*`) renders as literal text. Nothing is dropped.
 - Input cleanup matches PHP-Textile's `cleanWhiteSpace()` (`classTextile.php:2625`): byte-order mark removed, CRLF → LF, whitespace-only lines treated as blank.
@@ -115,10 +117,12 @@ all covered by `tests/unit.textile.test.mjs`:
 **Bare URLs.** Upstream ran `text::auto_link_urls($text, '_blank')` on the raw source
 before Textile (`MY_format.php:52`). That rewrote the URL half of `"text":http://…` links
 and `!http://…!` images into `<a>` tags, so Textile no longer recognised them. The port
-links bare URLs after Textile, on the rendered text, skipping existing links, `<code>`
-and `<pre>`. Bare URLs still open in a new window (`target="_blank"`) and Textile links
-and images keep working. Schemes linked: http, https, ftp, ftps. Upstream also linked
-naked `www.` hosts; the port does not.
+sets aside only the bare URLs Textile doesn't own (not a `"text":url` target, an
+`!image!` source, or an HTML attribute), runs Textile, then puts each URL back exactly
+as typed: a `target="_blank"` link in body text, plain text inside existing links,
+`<code>` and `<pre>`. So `800x600` or `--` inside a URL is never restyled, and Textile
+links and images keep working. Schemes linked: http, https, ftp, ftps. Upstream also
+linked naked `www.` hosts; the port does not.
 
 ---
 

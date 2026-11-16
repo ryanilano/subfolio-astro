@@ -4,7 +4,7 @@
  * Unlike the smoke suite these need no build: they import src/lib/renderText.ts
  * directly (Node strips the TypeScript types on import) and check the HTML it
  * returns. One test per Textile construct original Subfolio content uses, then
- * the three real K2 text embeds in tests/fixtures/k2-textile/ (copied verbatim
+ * the four real K2 text embeds in tests/fixtures/k2-textile/ (copied verbatim
  * from Ryan's 2011 K2 working folder).
  *
  * Run:  node --test tests/unit.textile.test.mjs   (also part of `npm run test`)
@@ -16,6 +16,8 @@ import { fileURLToPath } from "node:url";
 import { renderText } from "../src/lib/renderText.ts";
 
 const tx = (src) => renderText(src, "textile");
+// A UTF-8 byte-order mark, built here so the source holds no invisible character.
+const BOM = String.fromCharCode(0xfeff);
 const fixture = (rel) =>
   readFileSync(fileURLToPath(new URL(`./fixtures/k2-textile/${rel}`, import.meta.url)), "utf8");
 
@@ -75,8 +77,53 @@ test("!image! and !image(alt)!:link render images", () => {
   );
 });
 
-test("typographic glyphs match PHP-Textile (spaced hyphen → en dash, -- → em dash)", () => {
-  assert.equal(tx("Darko - Skate Style -- 2011"), "<p>Darko – Skate Style — 2011</p>");
+// --- Typography: upstream PHP-Textile 2.5.1 glyph table (classTextile.php:646-659) --
+
+test("glyphs: spaced hyphen → en dash, double hyphen → em dash", () => {
+  assert.equal(tx("Darko - Skate Style"), "<p>Darko – Skate Style</p>"); // U+2013
+  assert.equal(tx("Draft--final and Draft -- final"), "<p>Draft—final and Draft — final</p>"); // U+2014
+});
+
+test("glyphs: curly quotes and apostrophes, incl. Back in '88", () => {
+  assert.equal(tx(`"Double" and 'single'`), "<p>“Double” and ‘single’</p>");
+  assert.equal(tx("It's Ryan's board"), "<p>It’s Ryan’s board</p>");
+  // PHP rule /(\s)'(\d+$wrd?)\b/ → apostrophe; a quoted '90s' stays a quote pair.
+  assert.equal(tx("Back in '88 and the '90s"), "<p>Back in ’88 and the ’90s</p>");
+  assert.equal(tx("the '90s' sound"), "<p>the ‘90s’ sound</p>");
+});
+
+test("glyphs: ellipsis, (c) (r) (tm)", () => {
+  assert.equal(tx("Wait for it..."), "<p>Wait for it…</p>");
+  assert.equal(tx("Copyright (c) 2011"), "<p>Copyright © 2011</p>");
+  assert.equal(tx("Brand(r) and Name(tm) and Name (TM)"), "<p>Brand® and Name™ and Name ™</p>");
+});
+
+test("glyphs: dimension sign and fractions, either bracket style", () => {
+  assert.equal(tx("10 x 20 and 3 X 4"), "<p>10 × 20 and 3 × 4</p>");
+  assert.equal(tx("(1/2) [1/2] [1/4] (3/4)"), "<p>½ ½ ¼ ¾</p>");
+});
+
+test("glyphs: textile-js differences from PHP-Textile are undone", () => {
+  // PHP converts every -- (textile-js needs words or spaces around it).
+  assert.equal(tx("a--. --) a---b"), "<p>a—. —) a—-b</p>");
+  // PHP has no prime rule: feet and inches get closing quotes, not ′ ″.
+  assert.equal(tx(`6'2" tall, 5' wide`), "<p>6’2” tall, 5’ wide</p>");
+  // PHP has no arrow rule: -> stays as typed.
+  assert.equal(tx("a->b and c -> d"), "<p>a->b and c -> d</p>");
+  // Apostrophe after a paren; mixed-case (Tm); every fraction, not just the first.
+  assert.equal(tx("(Subfolio)'s board"), "<p>(Subfolio)’s board</p>");
+  assert.equal(tx("Name(Tm) (1/2) (1/2) (o) (o) (+/-) (+/-)"), "<p>Name™ ½ ½ ° ° ± ±</p>");
+});
+
+test("glyphs leave code and <pre> literal", () => {
+  assert.equal(tx("@a - b... '88 (c)@"), "<p><code>a - b... '88 (c)</code></p>");
+  assert.equal(tx("<pre>a -- b [1/2] 3 X 4</pre>"), "<pre>a -- b [1/2] 3 X 4</pre>");
+});
+
+test("the dash-to-space naming rule never touches body text", () => {
+  // replace_dash_space applies to listing names only (listingHelpers.ts);
+  // hyphens inside words in a text body stay hyphens.
+  assert.equal(tx("pre-2011 well-known file-name"), "<p>pre-2011 well-known file-name</p>");
 });
 
 // --- Bare URLs (upstream text::auto_link_urls) --------------------------------
@@ -87,6 +134,28 @@ test("bare URLs open in a new window; trailing punctuation stays outside", () =>
     '<p>See <a href="http://example.com/a?b=1&#x26;c=2" target="_blank">http://example.com/a?b=1&#x26;c=2</a>. ' +
       'Or (<a href="https://example.org" target="_blank">https://example.org</a>).</p>',
   );
+});
+
+test("bare URLs reach the page exactly as typed (no Textile typography inside)", () => {
+  // 800x600 would become 800×600, -- an em dash, ABCD a caps span.
+  const url = "http://cdn.example.com/800x600/a--b/ABCD.jpg";
+  assert.equal(tx(`see ${url}`), `<p>see <a href="${url}" target="_blank">${url}</a></p>`);
+});
+
+test("Textile phrase markers around a bare URL still apply", () => {
+  assert.equal(
+    tx("*http://x.com* and _http://y.com_"),
+    '<p><strong><a href="http://x.com" target="_blank">http://x.com</a></strong> and ' +
+      '<em><a href="http://y.com" target="_blank">http://y.com</a></em></p>',
+  );
+});
+
+test("URLs Textile owns, and URLs in HTML attributes, are left to Textile and HTML", () => {
+  assert.equal(
+    tx('"Read this":http://area17.com/a--b and !http://x.com/800x600.png!'),
+    '<p><a href="http://area17.com/a--b">Read this</a> and <img src="http://x.com/800x600.png" alt=""></p>',
+  );
+  assert.equal(tx('<a href="http://x.com/a--b">http://x.com/a--b</a>'), '<p><a href="http://x.com/a--b">http://x.com/a--b</a></p>');
 });
 
 test("URLs inside @code@ and <pre> are not auto-linked", () => {
@@ -130,7 +199,7 @@ test("an unpaired * stays literal text", () => {
 // --- Input hygiene -----------------------------------------------------------
 
 test("byte-order mark, CRLF line endings and trailing blank lines are cleaned", () => {
-  assert.equal(tx("﻿h1. Title"), "<h1>Title</h1>");
+  assert.equal(tx(BOM + "h1. Title"), "<h1>Title</h1>");
   assert.equal(tx("h1. A\r\n\r\nB\r\nC"), "<h1>A</h1>\n<p>B<br>\nC</p>");
   assert.equal(tx("h1. Title\n\n\n\n\n"), "<h1>Title</h1>");
 });
@@ -152,6 +221,15 @@ test("none and markdown keep their own output for the same source", () => {
 
 test("K2 01. Darko: the top embed is a heading, not literal h1.", () => {
   assert.equal(tx(fixture("01. Darko/-t-top-darko.txt")), "<h1>Darko – Skate Style</h1>");
+});
+
+test("K2 04. T1 Speedlace theme board matches the 2011 Subfolio page", () => {
+  // Ryan's screenshot of the original 2011 page shows a real h1 reading
+  // "T1 Speedlace – Super Tech, Clean, NASA Aesthetic" (en dash).
+  const html = tx(fixture("04. T1 Speedlace/00-Themes+Inspiration/-t-top-t1speedlace.txt"));
+  // PHP-Textile also wraps 3+ capitals in <span class="caps">; neither theme styles it.
+  assert.equal(html, '<h1>T1 Speedlace – Super Tech, Clean, <span class="caps">NASA</span> Aesthetic</h1>');
+  assert.equal(html.replace(/<[^>]+>/g, ""), "T1 Speedlace – Super Tech, Clean, NASA Aesthetic");
 });
 
 test("K2 08. Curfew Colorway 2: double space after the dash is kept", () => {

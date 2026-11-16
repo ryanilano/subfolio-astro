@@ -185,3 +185,133 @@ body {
     border-bottom-color: #d8d8d8;
   }
 }
+
+/* Project headers: the 2015 title/subtitle pair and two-column copy.
+   Content folders carry this markup themselves, as raw HTML in their -t- text
+   file (e.g. 2010_ryanilano/sephora/-t-00-sephora.txt):
+     header.project-header > hgroup > h1 + h2
+     figure > figcaption.project-copy > .column.left (p) + .column.right (ul)
+   The port passes it through untouched; only the 2015 styling was missing, so
+   the columns stacked in a narrow box and h1/h2 inherited the base theme's
+   46px light-grey headings (with h1 + h2 pulled up 30px), reading as one
+   heading. Ported from the 2015 sheet (config-legacy main.css 902-943,
+   984-1006), with sizes taken as COMPUTED px from the archived original
+   (/original-2015/sephora/, measured in-browser 2026-11-16 at 1440 wide)
+   because the 2015 em chain (body 10px, .column 140%, p .8em) does not exist
+   in the port. Colours are the 2015 inline palette's, not the raw sheet's:
+   h1 measures #333, h2 #666. Scoped to .project-header, so pages without
+   that markup are untouched. */
+
+/* Lift the base theme's 70% measure cap: the 2015 header spans the full
+   text column, split into two 50% columns. */
+#content .project-header h1,
+#content .project-header h2,
+#content .project-header p,
+#content .project-header ul {
+  max-width: none;
+}
+
+#content .project-header h1,
+#content .project-header h2,
+#content .project-header p,
+#content .project-header li {
+  font-family: "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
+}
+
+/* Title (dark) over subtitle (grey), same size, no gap between them. */
+#content .project-header h1,
+#content .project-header h2 {
+  font-size: 38.4px;
+  line-height: 38.4px;
+  font-weight: 400;
+  letter-spacing: normal;
+  /* Also undoes the base theme's h1 + h2 { margin-top: -30px } pull:
+     (1,1,1) beats its (0,1,2). */
+  margin-top: 0;
+}
+#content .project-header h1 {
+  color: #333;
+  margin-bottom: 0;
+}
+#content .project-header h2 {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+/* Two columns: copy left, Role/Medium bullets right. overflow:hidden on the
+   figcaption contains the floats so the images below start underneath. The
+   2015 reset zeroed <figure>'s UA margin (40px each side); without it the
+   columns start indented and come out 80px narrower. */
+#content .project-header figure {
+  margin: 0;
+}
+#content .project-copy {
+  overflow: hidden;
+}
+/* 2015 header image (2015 main.css 904-908): scale to the column and sit
+   clear of the copy. Without it a wide header image overflows the column
+   and is cropped by the figcaption's overflow:hidden or scrolls the page. */
+#content .project-header .project-image img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 2em;
+}
+#content .project-header .column {
+  float: left;
+  width: 50%;
+}
+#content .project-header .column p {
+  color: #333;
+  font-size: 17.92px;
+  line-height: 25.088px;
+  margin: 0 0 10px;
+  padding-right: 17.92px;
+}
+#content .project-header .column ul {
+  margin: 0;
+  padding: 0;
+}
+#content .project-header .column ul li {
+  color: #333;
+  font-size: 17.92px;
+  line-height: 25.088px;
+  margin: 0 0 0 20px;
+  list-style-type: disc;
+}
+
+/* 2015 breakpoints. 50em: the columns stack. 40em: the title, subtitle and
+   copy step down to 80%. (The 2015 sheet's 30em step, a further 75% that put
+   body copy near 11px, is left out on purpose: too small to read.) */
+@media screen and (max-width: 50em) {
+  #content .project-header .column {
+    float: none;
+    clear: both;
+    width: 100%;
+  }
+  #content .project-header .column.left {
+    margin-bottom: 22.4px;
+  }
+  #content .project-header .column p {
+    padding-right: 0;
+  }
+}
+@media screen and (max-width: 40em) {
+  #content .project-header h1,
+  #content .project-header h2 {
+    font-size: 30.72px;
+    line-height: 30.72px;
+  }
+  /* 2015 shrank only the paragraph here, leaving the bullets a size larger;
+     step both down together so the two columns stay one size. */
+  #content .project-header .column p,
+  #content .project-header .column ul li {
+    font-size: 14.336px;
+    line-height: 20.0704px;
+  }
+  /* WCAG 2.2 SC 2.5.8: some bullets are a lone link (the-corner); at 20px
+     leading they are 17px-tall targets 20px apart. 24px clears the minimum. */
+  #content .project-header .column ul li {
+    line-height: 24px;
+  }
+}

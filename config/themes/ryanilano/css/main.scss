@@ -225,6 +225,8 @@ body {
   line-height: 38.4px;
   font-weight: 400;
   letter-spacing: normal;
+  /* Also undoes the base theme's h1 + h2 { margin-top: -30px } pull:
+     (1,1,1) beats its (0,1,2). */
   margin-top: 0;
 }
 #content .project-header h1 {
@@ -234,10 +236,6 @@ body {
 #content .project-header h2 {
   color: #666;
   margin-bottom: 20px;
-}
-/* Undo the base theme's h1 + h2 { margin-top: -30px } pull. */
-#content .project-header h1 + h2 {
-  margin-top: 0;
 }
 
 /* Two columns: copy left, Role/Medium bullets right. overflow:hidden on the
@@ -249,6 +247,15 @@ body {
 }
 #content .project-copy {
   overflow: hidden;
+}
+/* 2015 header image (2015 main.css 904-908): scale to the column and sit
+   clear of the copy. Without it a wide header image overflows the column
+   and is cropped by the figcaption's overflow:hidden or scrolls the page. */
+#content .project-header .project-image img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 2em;
 }
 #content .project-header .column {
   float: left;
@@ -300,6 +307,11 @@ body {
   #content .project-header .column p,
   #content .project-header .column ul li {
     font-size: 14.336px;
-    line-height: 20.07px;
+    line-height: 20.0704px;
+  }
+  /* WCAG 2.2 SC 2.5.8: some bullets are a lone link (the-corner); at 20px
+     leading they are 17px-tall targets 20px apart. 24px clears the minimum. */
+  #content .project-header .column ul li {
+    line-height: 24px;
   }
 }

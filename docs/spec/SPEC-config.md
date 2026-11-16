@@ -66,7 +66,7 @@ hard-coded default (from `filebrowser.php`) and the sample value when one exists
 | 10 | `theme` | `string` | `"default"` | `"default"` | Active desktop theme directory name (under `config/themes/`). |
 | 11 | `mobile_theme` | `string` | `"mobile"` | `"mobile"` | Theme directory used when the user agent is iPhone/iPod (overrides `theme`). |
 | 12 | `directory` | `string` (path) | `$site_folder."directory"` | `"directory"` | Path to the served content directory, resolved relative to the site root. |
-| 13 | `text_rendering` | `string` | `"none"` | `"textile"` | Markup language for enhancer-file content. Allowed values: `"none"`, `"textile"`, `"markdown"`. |
+| 13 | `text_rendering` | `string` | `"none"` | `"textile"` | Markup language for enhancer-file content. Allowed values: `"none"`, `"textile"`, `"markdown"`. The Astro port reads this from `SUBFOLIO_TEXT_RENDERING` instead; see §2a. |
 | 14 | `listing_mode` | `string` | `"list"` | *(none in sample)* | Default listing layout. Allowed values: `"list"`, `"grid"`. |
 | 15 | `thumbnail_max_filesize` | `int` (MB) | `1` | `5` | Images larger than this (in MB) are skipped during thumbnail generation. |
 | 16 | `display_max_filesize` | `int` (MB) | `5` | *(none in sample)* | Files larger than this (in MB) are hidden from listings on desktop. |
@@ -81,6 +81,50 @@ hard-coded default (from `filebrowser.php`) and the sample value when one exists
 | 25 | `language_yaml_file` | `string` (basename) | `"language.yml"` | `"language.yml"` | Filename of the language-label YAML file (resolved under `config/settings/`). |
 | 26 | `auth_session` | `string` | `"1Gmo0pangF8FZ05R"` | *(none in sample)* | Secret used to sign/validate session cookies. **⚠️ Risk:** hard-coded PHP default; must be overridden per deployment. |
 | 27 | `auth_salt` | `string` | `"W8Kivk5ykGhSrc11"` | *(none in sample)* | Salt used in the custom password hashing scheme (SHA-512 based). **⚠️ Risk:** hard-coded PHP default; replace with bcrypt in Go port. |
+
+### 2a. `text_rendering` in the Astro port
+
+Upstream `format::get_rendered_text()` (`engine/application/helpers/MY_format.php:48-56`
+at `ec8889e`) renders `-t-`/`-m-`/`-b-` text embeds and `.txt` detail bodies with the
+engine chosen by `text_rendering`. The port (`src/lib/renderText.ts`) supports all
+three engines.
+
+**Where the setting comes from.** The env var `SUBFOLIO_TEXT_RENDERING`, default
+`markdown`, read by the loader (`src/content.config.ts`) and the page route
+(`src/pages/[...path].astro`). Both take it from `src/lib/textRendering.ts`, which
+ignores case and surrounding spaces, treats unset or empty as `markdown`, and stops the
+build on any other value with a message listing `none, textile, markdown`. The `text_rendering` key in `config/settings.yml` is
+not read (`src/lib/site.ts`). One source means config time and render time can't
+disagree, which is the split-build bug recorded in `docs/TESTING.md` Findings #3.
+
+| Value | Engine | Output |
+|---|---|---|
+| `markdown` (default) | remark + GFM + smartypants | Markdown → HTML; bare URLs linked by GFM. |
+| `textile` | [`textile-js`](https://github.com/borgar/textile-js) 2.1.1 (MIT, no dependencies, pinned exact) | Textile → HTML; see below. |
+| `none` | none | Escaped plain text, blank lines → paragraphs, newlines → `<br>`, bare URLs linked. |
+
+**Textile.** Upstream bundles PHP-Textile 2.5.1 (`engine/application/vendor/classTextile.php`).
+`textile-js` implements the same Textile 2 syntax. Constructs Subfolio content uses,
+all covered by `tests/unit.textile.test.mjs`:
+
+- Blocks: `h1.` to `h6.`, `p.`, `bq.`, `*` bulleted and `#` numbered lists (nested with `**`, `##`), blank line = new paragraph, single newline = `<br>`.
+- Phrases: `*strong*`, `_em_`, `"link text":url`, `!image.png!`, `!image.png(alt)!:link`.
+- Typography follows PHP-Textile's glyph table (`classTextile.php:646-659`, rules in `prepGlyphs()`): ` - ` → en dash, `--` → em dash, curly quotes and apostrophes (`'88` → ’88, `6'2"` → 6’2”), `...` → ellipsis, (c) (r) (tm), `10 x 20` / `3 X 4` → ×, (1/2) or [1/2] → ½, (o) → °, (+/-) → ±. 3+ capitals are wrapped in `<span class="caps">`, which neither theme styles. Code and `<pre>` stay literal. Example: `h1. Studio Kit - Clean, Simple, HTML Ready` renders as `<h1>Studio Kit – Clean, Simple, <span class="caps">HTML</span> Ready</h1>`, as PHP Textile did.
+- Where textile-js's own glyph rules differ from PHP's, a pass after it applies PHP's rule: every `--` (textile-js needs letters or spaces around it), no prime marks (textile-js makes `5'` ′), `->` left as typed (textile-js makes it →), `'88`, `(Subfolio)'s`, capital `X`, mixed-case `(Tm)`, and every fraction or degree sign rather than only the first.
+- The dash-to-space naming option (`replace_dash_space`) changes listing names only. It never touches text bodies.
+- Raw HTML: same trust policy as the markdown path. Block HTML passes through, then the output is re-parsed (rehype-raw) so it is always well-formed. HTML comments stay comments, even across blank lines.
+- Unknown syntax (`h7.`, `foo.`, an unpaired `*`) renders as literal text. Nothing is dropped.
+- Input cleanup matches PHP-Textile's `cleanWhiteSpace()` (`classTextile.php:2625`): byte-order mark removed, CRLF → LF, whitespace-only lines treated as blank.
+
+**Bare URLs.** Upstream ran `text::auto_link_urls($text, '_blank')` on the raw source
+before Textile (`MY_format.php:52`). That rewrote the URL half of `"text":http://…` links
+and `!http://…!` images into `<a>` tags, so Textile no longer recognised them. The port
+sets aside only the bare URLs Textile doesn't own (not a `"text":url` target, an
+`!image!` source, or an HTML attribute), runs Textile, then puts each URL back exactly
+as typed: a `target="_blank"` link in body text, plain text inside existing links,
+`<code>` and `<pre>`. So `800x600` or `--` inside a URL is never restyled, and Textile
+links and images keep working. Schemes linked: http, https, ftp, ftps. Upstream also
+linked naked `www.` hosts; the port does not.
 
 ---
 

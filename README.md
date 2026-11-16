@@ -40,6 +40,16 @@ The wrapper is needed because Astro only loads dotenv values at render time — 
 
 > **Why `.env.content` and not `.env`?** Astro auto-loads `.env` at render time only. With the content dir in `.env`, a plain `npm run build` produced a split-brain build: pages came from the fixture while the `/directory/` raw-bytes route walked the live content tree — leaking the content repo's `.git/` into `dist/` and permanently failing two smoke tests. Keeping the value in a file Astro never reads means every build is internally consistent: plain `npm` commands = pure fixture, `./dev-content.sh` = pure live content.
 
+## Text rendering
+
+Text embeds (`-t-`/`-m-`/`-b-` `.txt` files) and `.txt` detail pages render with the engine named in `SUBFOLIO_TEXT_RENDERING`: `markdown` (default), `textile`, or `none`. Original Subfolio defaulted to Textile, so a folder written for it should be built with:
+
+```sh
+SUBFOLIO_TEXT_RENDERING=textile npm run build
+```
+
+Textile support uses [`textile-js`](https://github.com/borgar/textile-js) (MIT). Supported syntax, raw-HTML policy and the one deliberate difference from upstream are in [SPEC-config §2a](docs/spec/SPEC-config.md#2a-text_rendering-in-the-astro-port).
+
 ## Layout
 
 - `src/loaders/` — the content loader (one module per concern; see `schema.ts` for the emitted entry shape). - `src/pages/[...path].astro` — catch-all that ports the PHP controller, resolving each entry to a folder/file/single/slide view. - `src/pages/directory/[...path].ts` — raw-bytes endpoint serving file contents under `/directory/<path>`. - `src/components/` — ported `default`-theme listing and per-filekind views. - `config/filekinds.yml` — extension → kind → view mapping (from upstream). - `content/examples/` — bundled fixture exercising every convention. - `docs/` — port plan and reference: [ROADMAP](docs/ROADMAP.md), the [deployment ADR](docs/ADR-deployment.md), and the stack-agnostic [behavior specs](docs/spec/) extracted from the original PHP engine.

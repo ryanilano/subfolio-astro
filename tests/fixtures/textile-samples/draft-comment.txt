@@ -1,0 +1,15 @@
+h1. Sample Board
+
+h4. A short subtitle that explains the board in one line.
+
+<!-- <div class='columns3'><h4>Option A</h4>draft notes for option a
+
+<h4>Option B</h4>draft notes for option b.
+
+<h4>Option C</h4>draft notes for option c.
+</div> -->
+
+
+
+
+

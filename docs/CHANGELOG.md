@@ -9,6 +9,15 @@ PHP app on the same content fixture.
 
 ### Added
 
+- **Textile text rendering.** `SUBFOLIO_TEXT_RENDERING=textile` now renders Textile
+  instead of falling back to plain text with a warning, so folders written for
+  original Subfolio (which defaulted to Textile) show `h1. Field Notes - Summer Edition` as a
+  heading. Uses `textile-js` 2.1.1 (MIT). Covers headings, `p.`, `bq.`, lists,
+  `*strong*`, `_em_`, links, images, line breaks and block HTML, with PHP-Textile's
+  typography (` - ` → en dash, `--` → em dash, curly quotes, `...` → ellipsis,
+  (c) (r) (tm)); unknown syntax stays literal text. `markdown` and `none` output is unchanged. Details in
+  [SPEC-config §2a](spec/SPEC-config.md#2a-text_rendering-in-the-astro-port).
+
 - **SVG and WebP display as images.** Both were missing from `config/filekinds.yml`,
   so they showed a download box, and a `-t-` SVG embed was read as text and its markup
   inlined into the page. They are now `img` files: image detail view, gallery

@@ -48,11 +48,11 @@ const credit = siteConfig.site_footer_credit || "";
 </footer>
 
 <style>
-  /* Right-aligned credit, mirroring .footer__copyright's float-left. Stacks
-     under the copyright on narrow screens instead of crowding it. */
+  /* Credit runs on from the copyright on the same line (both float left).
+     Stacks under the copyright on narrow screens instead of crowding it. */
   .footer__credit {
-    float: right;
-    text-align: right;
+    float: left;
+    text-align: left;
     line-height: 70px; /* matches the theme's 70px footer link boxes */
   }
   /* The theme makes footer links 70px inline-blocks; inside running text
@@ -72,6 +72,10 @@ const credit = siteConfig.site_footer_credit || "";
       /* The footer's 70px line box suits one line; wrapped text needs normal leading. */
       line-height: 1.5;
       padding: 0 5px 24px;
+    }
+    /* A leading separator makes no sense once the credit starts its own line. */
+    .footer__credit :global(.footer__sep) {
+      display: none;
     }
   }
 </style>

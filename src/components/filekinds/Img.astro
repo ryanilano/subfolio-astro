@@ -41,16 +41,16 @@ const half = sizeAttrs(f.width / 2, f.height / 2);
       {
         hasShadow ? (
           <div class="detailIMG__wrapper" style={`box-shadow:${shadowStyle};`}>
-            <img {...full} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
+            <img {...full} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt={f.alt} />
           </div>
         ) : hasBrowser ? (
           <div class="detailIMG__wrapper detailIMG__wrapper--browser" style={`box-shadow:${shadowStyle};`}>
-            <img {...full} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
+            <img {...full} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt={f.alt} />
           </div>
         ) : isRetina ? (
-          <img {...half} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
+          <img {...half} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt={f.alt} />
         ) : (
-          <img {...full} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt="" />
+          <img {...full} src={f.url} class="detailIMG" decoding="async" data-behavior="toggle_img" alt={f.alt} />
         )
       }
       <HideableDownloadBox file={f} />

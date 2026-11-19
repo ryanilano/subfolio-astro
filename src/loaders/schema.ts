@@ -78,6 +78,8 @@ const childFile = z.object({
     .optional(),
   /** Comment from a sibling `<name>.info` sidecar (SPEC-theme-api: item property `comment`). */
   comment: z.string().optional(),
+  /** Alt text from a sibling `<name>.info` sidecar's optional `alt:` key (extension; empty when unset). */
+  alt: z.string().optional(),
 });
 
 const childFolder = z.object({

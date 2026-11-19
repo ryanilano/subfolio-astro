@@ -75,6 +75,7 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
         const features: Feature[] = [];
         const related: Related[] = [];
         const infoComments = new Map<string, string>();
+        const infoAlts = new Map<string, string>();
         const excluded = new Set<string>();
         let access = null as ReturnType<typeof parseAccess> | null;
         const subdirsToWalk: string[] = [];
@@ -115,7 +116,11 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
           if (!isDir && name.endsWith(cfg.infoExtension)) {
             const doc = parseSubfolioYaml(readSafe(join(absDir, name)));
             const comment = asString(doc.comment);
-            if (comment) infoComments.set(name.slice(0, -cfg.infoExtension.length), comment);
+            const base = name.slice(0, -cfg.infoExtension.length);
+            if (comment) infoComments.set(base, comment);
+            // Optional `alt:` key: alt text for an image file (extension, opt-in per file).
+            const alt = asString(doc.alt);
+            if (alt) infoAlts.set(base, alt);
             continue;
           }
 
@@ -168,6 +173,8 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
         for (const f of files) {
           const c = infoComments.get(f.name);
           if (c) f.comment = c;
+          const a = infoAlts.get(f.name);
+          if (a) f.alt = a;
         }
 
         const embeds = collectEmbeds(embedInputs, ctx);

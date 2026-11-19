@@ -17,6 +17,7 @@ import Listing from "../components/listing/Listing.astro";
 import { loadFileKinds } from "../loaders/filekinds.ts";
 import { buildFileViewData, type FileViewData } from "../lib/fileHelpers.ts";
 import { ogImageFor } from "../lib/thumbnailPipeline.ts";
+import { resolvePageImage } from "../lib/pageImage.ts";
 import { textRenderer } from "../lib/textRendering.ts";
 import { rssItemsFor, type RssItem } from "../lib/rssFeed.ts";
 import Rss from "../components/filekinds/Rss.astro";
@@ -139,11 +140,13 @@ let rssItems: RssItem[] = [];
 // Open Graph: ogType per route kind; ogImage from the listing's first thumbnail.
 let ogType: "website" | "article" = "website";
 let ogImage: string | undefined;
+let pageDescription: string | undefined;
 
 if (props.kind === "folder") {
   breadcrumb = buildBreadcrumb(props.entry.path, slideRedirects);
   isRoot = props.entry.path === ".";
-  title = props.entry.path === "." ? "" : props.entry.displayName;
+  title = props.entry.path === "." ? "" : (props.entry.pageTitle ?? props.entry.displayName);
+  pageDescription = props.entry.pageDescription;
   const nav = folderSiblingNav(props.entry, allEntries);
   prevLink = nav.prevLink;
   nextLink = nav.nextLink;
@@ -156,7 +159,14 @@ if (props.kind === "folder") {
   const imagePaths = props.entry.files
     .filter((file) => file.kind === "img")
     .map((file) => (relDir ? `${relDir}/${file.name}` : file.name));
-  ogImage = await ogImageFor(imagePaths);
+  // A folder sidecar `image:` wins when it resolves to a real file or a valid
+  // http(s) URL; content files go through ogImageFor like any thumbnail. A bad
+  // value resolves to null and falls back to the first image (never throws).
+  const pageImg = resolvePageImage(props.entry.pageImage, relDir, contentRoot);
+  ogImage =
+    pageImg?.kind === "url"
+      ? pageImg.url
+      : ((pageImg ? await ogImageFor([pageImg.relPath]) : undefined) ?? (await ogImageFor(imagePaths)));
 } else if (props.kind === "single") {
   breadcrumb = buildBreadcrumb(props.entry.path, slideRedirects);
   // .site/.oplx folder rendered as a single file-detail view. Synthesize a
@@ -235,6 +245,7 @@ const redirectTo = props.kind === "redirect" ? props.to : null;
       nextLink={nextLink}
       ogType={ogType}
       ogImage={ogImage}
+      description={pageDescription}
     >
       {props.kind === "folder" && <Listing entry={props.entry} />}
       {fileView && fileView.kind === "rss" ? (

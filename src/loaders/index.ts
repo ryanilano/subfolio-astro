@@ -179,6 +179,11 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
 
         const embeds = collectEmbeds(embedInputs, ctx);
         const self = folderEnhancerOf(relDir.split("/").pop() ?? "");
+        // This folder's own sidecar (`<parent>/<name>.info`): optional page meta.
+        const selfInfo = relDir ? parseSubfolioYaml(readSafe(join(contentRoot, relDir + cfg.infoExtension))) : {};
+        const pageTitle = asString(selfInfo.title) || undefined;
+        const pageDescription = asString(selfInfo.description) || undefined;
+        const pageImage = asString(selfInfo.image) || undefined;
         const entry = folderEntrySchema.parse({
           path: relDir || ".",
           name: relDir.split("/").pop() || ".",
@@ -193,6 +198,9 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
           related,
           access,
           excluded: [...excluded],
+          pageTitle,
+          pageDescription,
+          pageImage,
         });
 
         const id = relDir || ".";

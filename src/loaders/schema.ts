@@ -148,6 +148,11 @@ export const folderEntrySchema = z.object({
   access: accessRules.nullable(),
   /** Names excluded from the plain listing because a .ftr features them (debug aid). */
   excluded: z.array(z.string()),
+  /** Page meta from this folder's own `<name>.info` sidecar (optional keys title,
+   *  description, image; extension). Used for <title>, link-preview text and og:image. */
+  pageTitle: z.string().optional(),
+  pageDescription: z.string().optional(),
+  pageImage: z.string().optional(),
 });
 
 export type FolderEntry = z.infer<typeof folderEntrySchema>;

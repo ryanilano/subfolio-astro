@@ -126,6 +126,121 @@ as typed: a `target="_blank"` link in body text, plain text inside existing link
 links and images keep working. Schemes linked: http, https, ftp, ftps. Upstream also
 linked naked `www.` hosts; the port does not.
 
+### 2b. Image metadata in the Astro port (`strip_location`, `strip_all_metadata`)
+
+Port-only keys; upstream had no equivalent and served files as they were. The
+`/directory/` route (`src/pages/directory/[...path].ts`) publishes content files into
+the build, so without this a phone photo ships with the GPS position it was taken at.
+
+| YAML key | Type | Default | Meaning |
+|---|---|---|---|
+| `strip_location` | `bool` | `true` | Remove location data from every published image (as listed below). Set `false` to publish the original bytes. |
+| `strip_all_metadata` | `bool` | `false` | Remove all metadata except the ICC colour profile and EXIF Orientation. When `true` it also removes location, whatever `strip_location` says. |
+
+Read by `src/lib/site.ts` (`siteConfig.strip_location`, `siteConfig.strip_all_metadata`,
+and the derived `imageStripMode`), which takes `true`/`false` or the strings
+`"true"`/`"false"` in any case. Any other value (`yes`, `on`, `1`, a typo) stops the
+build with an error naming the key, because a silent fallback for
+`strip_all_metadata: yes` would leave fields the owner believes are removed. Point
+`SUBFOLIO_CONFIG_DIR` at another config folder to set them per deploy, like every other
+`settings.yml` key.
+
+**What is touched.** Only the copy in `dist/` (and the bytes `astro dev` serves), plus
+each file inside the `.oplx` zips `scripts/gen-oplx.mjs` builds. Source files in the
+content directory are read, never written. Files are chosen **by content, never by
+extension**: anything whose first bytes are a JPEG, PNG, WebP, GIF, TIFF (DNG and other
+TIFF-based raws) or ISO-BMFF HEIF/AVIF goes through the stripper whatever it is called
+(`.jfif`, `.jpe`, `.mpo`, `.hif`, `.dng`, no extension at all). Every other file is
+served as is. A cached `.oplx` zip records the strip mode it was built with and is
+rebuilt when the mode (or the stripper version) changes.
+
+**`strip_location: true` (default) removes:**
+
+- the EXIF GPS directory: every GPS entry and value is zeroed, leaving a valid empty
+  GPS directory;
+- XMP place properties: any `prefix:GPS*`/`Gps*` property (EXIF GPS in XMP, DJI drone
+  `Gps*` fields, and DJI's own `drone-dji:Latitude/Longitude/AbsoluteAltitude/RelativeAltitude`),
+  `photoshop:City/State/Country`, `Iptc4xmpCore:Location/CountryCode`, the creator's postal
+  address (`Iptc4xmpCore:CreatorContactInfo` and its `CiAdr*` fields),
+  `Iptc4xmpExt:LocationCreated/LocationShown` and the other Extension place fields,
+  `dc:coverage`. Namespaces are matched by URI, so `ps:City` bound to the Photoshop
+  namespace is caught too. A JPEG APP1 segment holding an XMP packet under a signature
+  it doesn't recognise is scrubbed as XMP;
+- IPTC IIM place datasets 2:26, 2:27, 2:90, 2:92, 2:95, 2:100, 2:101 (also inside
+  Photoshop `8BIM` blocks);
+- the same fields in images appended after a JPEG's end marker (MPF secondary images
+  such as iPhone HDR gain maps);
+- PNG `Raw profile type …` text chunks (ImageMagick hex dumps of EXIF/XMP/IPTC), and
+  `tEXt`/`zTXt`/`iTXt` chunks whose keyword starts with `exif:`, `xmp:`, `photoshop:`,
+  `Iptc4xmp` or `iptc:` or names a place property (ImageMagick writes one per
+  property, e.g. `exif:GPSLatitude`). XMP in an `XML:com.adobe.xmp` chunk is scrubbed;
+- GeoTIFF georeferencing in TIFF files: tags 33550, 33922, 34264, 34735, 34736, 34737
+  are zeroed (the tags stay, empty), so a GeoTIFF loses its map position;
+- motion photos: when a movie (ISO-BMFF `ftyp`) is appended after the JPEG, every
+  `©xyz` payload and the values of `com.apple.quicktime.location*` keys are blanked at
+  the same length; the rest of the movie is byte for byte.
+
+Everything else stays. Location fields are overwritten **in place at the same byte
+length** (zeros in EXIF, spaces in XMP and IPTC), so no offset in the file moves: pixel
+data, ICC profile, EXIF Orientation, camera fields, MPF offsets, HEIF item locations
+and TIFF strip offsets are all byte-identical. PNG is the one format whose file size can
+change (a compressed XMP chunk is recompressed); its image data chunks are copied as is.
+
+**`strip_all_metadata: true`:**
+
+- JPEG, PNG, WebP: every metadata block is removed except the ICC profile (and, for
+  JPEG, the JFIF and Adobe segments decoders need). JPEG data after the end marker
+  (MPF gain maps, depth maps) is dropped. If the photo is rotated (Orientation ≠ 1), a
+  26-byte EXIF holding only Orientation is written back so it still displays upright.
+- TIFF, AVIF, HEIC, GIF: blocks can't be dropped without moving offsets, so the
+  location scrub runs plus in-place blanking of Make, Model, Software, DateTime,
+  Artist, HostComputer, Copyright, ImageDescription, the Windows XP text tags, the EXIF
+  sub-directory, the whole XMP packet and all IPTC values.
+
+**Pixels.** Nothing is decoded or re-encoded. `tests/unit.strip-location.test.mjs`
+decodes original and stripped files with sharp and requires identical pixels for every
+format and mode, and for JPEG in location mode requires the bytes from the first scan
+marker to the end of the file to be identical.
+
+**When the build stops, and when it doesn't.**
+
+- A recognised image holding a metadata structure that can't be parsed or skipped
+  safely stops the build with `[strip-location] <path>: <reason>`. Examples: an XMP
+  packet in a GIF with no `<?xpacket end?>` marker, a HEIF metadata item stored in a
+  way the stripper doesn't support (compressed, split, unknown `infe` version), a TIFF
+  with more than 64 pages, a TIFF GPS value whose range is implausibly large or
+  overlaps image data or a directory (a corrupt count must never zero pixels), a
+  metadata segment or chunk cut off by the end of the file, or a corrupt length that
+  would hide later EXIF/XMP inside an unreadable tail. Fix or remove the file, or turn
+  both keys off.
+- A file with no image signature (empty, an SVG or HTML page named `.png`, any
+  non-image) is published unchanged: it can't hold EXIF, XMP or IPTC a browser reads.
+  If its name claims an image, the build prints a warning naming it. One exception: an
+  image-named file that still contains an EXIF, TIFF, XMP or `8BIM` signature (a
+  damaged header that exiftool reads past) stops the build.
+- A file cut short in its image data (a JPEG with no end marker or missing scan data, a
+  PNG cut inside `IDAT`, a WebP cut inside its bitstream, a HEIF cut inside `mdat`) has
+  the metadata before the cut scrubbed and is published.
+- A malformed EXIF block inside an otherwise good JPEG, PNG or WebP doesn't stop the
+  build: the whole EXIF block is zeroed instead (that file loses its Orientation).
+
+**Not covered (known gaps).** These can still carry a place after the strip:
+
+- Files under `public/` (Astro copies them itself), video files (MOV/MP4 location
+  atoms), PDFs, BigTIFF (stops the build) and RAW formats that aren't TIFF-based.
+- EXIF `OffsetTime*` (time zone, kept on purpose).
+- JPEG APP11 C2PA/JUMBF manifests (a `stds.exif` assertion can hold GPS; rewriting it
+  would break the signature), JPEG comment segments and PNG `Comment` text (free text),
+  and maker notes (Panasonic and Nikon can hold city and country names).
+- JPEG trailers that are neither embedded JPEGs nor an ISO-BMFF movie (for example
+  Samsung's `SEFT` trailer); in a movie, only `©xyz` and Apple location keys are blanked.
+- Performance: the XMP scrub slows down roughly with the square of the packet size when
+  a place property's opening tag has no closing tag (a 400 KB malformed packet takes
+  about 1.5 s). Real packets are a few KB.
+
+Thumbnails and WebP/AVIF siblings made by `gen-thumbs`/`gen-embeds` are written by
+sharp, which drops metadata by default, and they go through this filter as well.
+
 ---
 
 ## 3. PHP-only defaults (not in `settings.sample.yml`)

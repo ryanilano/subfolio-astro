@@ -17,6 +17,8 @@
 import type { APIRoute } from "astro";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve, extname } from "node:path";
+import { imageStripMode } from "../../lib/site.ts";
+import { publishedBytes } from "../../lib/stripMetadata.ts";
 
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 // Pre-generated auto thumbnails live out-of-tree (scripts/gen-thumbs.mjs). They
@@ -59,6 +61,12 @@ const MIME: Record<string, string> = {
 function mimeFor(name: string): string {
   return MIME[extname(name).toLowerCase()] ?? "application/octet-stream";
 }
+
+/**
+ * Metadata policy for published images (settings.yml `strip_location`, default
+ * true; `strip_all_metadata`, default false). null = serve bytes unchanged.
+ */
+const stripMode = imageStripMode;
 
 /**
  * Names that must never be served, even when the content root is a live git
@@ -170,6 +178,7 @@ export const GET: APIRoute = ({ params }) => {
       }
     }
   }
+  body = publishedBytes(relPath, body, stripMode);
   // Copy into a fresh ArrayBuffer-backed view. node's Buffer is typed over
   // ArrayBufferLike (incl. SharedArrayBuffer), which astro check won't accept
   // as a BodyInit/BlobPart; a plain ArrayBuffer is unambiguous.

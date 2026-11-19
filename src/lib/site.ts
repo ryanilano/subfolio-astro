@@ -11,6 +11,7 @@
  */
 import { asNumber, asString } from "../loaders/yaml.ts";
 import { loadSettings, loadThemeOptions, THEME_DEFAULT } from "../loaders/settings.ts";
+import type { StripMode } from "./stripMetadata.ts";
 
 /** Hard-coded site-wide baseline (PHP defaults). Overridden by settings.yml. */
 const DEFAULT_SITE_CONFIG = {
@@ -48,6 +49,19 @@ const DEFAULT_SITE_CONFIG = {
    * which is out of this milestone's scope. Flag wired, inert until set true.
    */
   enable_view_transitions: false,
+  /**
+   * Remove location data (EXIF GPS, XMP and IPTC place fields) from every
+   * published file that sniffs as an image (the /directory route and .oplx
+   * zips). ON by default; the source files are never changed, only the copies
+   * in the build. Only true/false accepted. See src/lib/stripMetadata.ts.
+   */
+  strip_location: true,
+  /**
+   * Remove ALL metadata from published images (camera, dates, owner, XMP,
+   * IPTC), keeping only the ICC colour profile and EXIF Orientation. OFF by
+   * default. When on, it implies strip_location.
+   */
+  strip_all_metadata: false,
 };
 
 /** Hard-coded display baseline (mirrors options.yml, SPEC-theme-api §8). */
@@ -144,6 +158,27 @@ function asBool(v: unknown, fallback: boolean): boolean {
   return fallback;
 }
 
+/**
+ * Strict boolean for settings whose silent fallback would be unsafe
+ * (`strip_location`, `strip_all_metadata`). Missing (undefined/null) gives the
+ * default; `true`/`false` or the strings "true"/"false" (any case, trimmed) are
+ * accepted; anything else (yes, on, 1, a typo) stops the build naming the key.
+ * The lenient asBool used to turn `strip_all_metadata: yes` into false.
+ */
+export function parseStrictBool(key: string, v: unknown, fallback: boolean): boolean {
+  if (v === undefined || v === null) return fallback;
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (s === "true") return true;
+    if (s === "false") return false;
+  }
+  throw new Error(
+    `settings.yml: ${key}: ${JSON.stringify(v)} is not a boolean. ` +
+      `Use true or false (default ${fallback}).`,
+  );
+}
+
 /** Coerce a raw YAML value to match the type of a default. */
 function coerceLike<T>(raw: unknown, def: T): T {
   if (raw === undefined || raw === null) return def;
@@ -192,6 +227,16 @@ export const siteConfig = {
     asString(settings.site_footer_credit) ?? DEFAULT_SITE_CONFIG.site_footer_credit,
   google_analytics_code:
     asString(settings.google_analytics_code) ?? DEFAULT_SITE_CONFIG.google_analytics_code,
+  strip_location: parseStrictBool(
+    "strip_location",
+    settings.strip_location,
+    DEFAULT_SITE_CONFIG.strip_location,
+  ),
+  strip_all_metadata: parseStrictBool(
+    "strip_all_metadata",
+    settings.strip_all_metadata,
+    DEFAULT_SITE_CONFIG.strip_all_metadata,
+  ),
   // theme options.yml (logo/favicon/palette — options wins, matches PHP precedence)
   site_logo_url: asString(options.site_logo_url) ?? DEFAULT_SITE_CONFIG.site_logo_url,
   site_logo_width: asNumber(options.site_logo_width, DEFAULT_SITE_CONFIG.site_logo_width),
@@ -199,6 +244,16 @@ export const siteConfig = {
   site_favicon_url: asString(options.site_favicon_url) ?? DEFAULT_SITE_CONFIG.site_favicon_url,
   color_palette: asString(options.color_palette) ?? DEFAULT_SITE_CONFIG.color_palette,
 };
+
+/**
+ * Metadata policy for every published copy of a content file: the /directory
+ * route and scripts/gen-oplx.mjs both use this. null = bytes unchanged.
+ */
+export const imageStripMode: StripMode | null = siteConfig.strip_all_metadata
+  ? "all"
+  : siteConfig.strip_location
+    ? "location"
+    : null;
 
 /** Display options: defaults ← theme options.yml (key names already match). */
 export const defaultOptions = (() => {

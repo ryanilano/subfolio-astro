@@ -50,6 +50,28 @@ SUBFOLIO_TEXT_RENDERING=textile npm run build
 
 Textile support uses [`textile-js`](https://github.com/borgar/textile-js) (MIT). Supported syntax, raw-HTML policy and the one deliberate difference from upstream are in [SPEC-config §2a](docs/spec/SPEC-config.md#2a-text_rendering-in-the-astro-port).
 
+## Image location data
+
+Photos often carry the GPS position they were taken at. By default the build removes
+location data (EXIF GPS, XMP and IPTC place fields, GeoTIFF tags, a motion photo's
+movie position) from every published file whose bytes are a JPEG, PNG, WebP, GIF, TIFF
+or HEIF/AVIF image, whatever its extension, including images inside `.oplx` zips. Your
+content files are never changed, only the copies in `dist/`, and pixels are not
+re-encoded. Some carriers are not removed yet (C2PA
+manifests, comments, maker notes, videos); the list is in the spec. Two keys in
+`config/settings.yml` (only `true` or `false`; anything else stops the build):
+
+```yaml
+strip_location: true        # default; false publishes original bytes
+strip_all_metadata: false   # true removes all metadata except colour profile and orientation
+```
+
+A recognised image whose metadata can't be parsed safely stops the build with its path
+rather than being published. A file with no image signature (an empty file, an SVG or
+HTML page named `.png`) is published unchanged with a warning, unless it still holds
+EXIF or XMP that tools can read, which also stops the build. A JPEG or PNG cut short in
+its image data is scrubbed and published. Details: [SPEC-config §2b](docs/spec/SPEC-config.md#2b-image-metadata-in-the-astro-port-strip_location-strip_all_metadata).
+
 ## Layout
 
 - `src/loaders/` — the content loader (one module per concern; see `schema.ts` for the emitted entry shape). - `src/pages/[...path].astro` — catch-all that ports the PHP controller, resolving each entry to a folder/file/single/slide view. - `src/pages/directory/[...path].ts` — raw-bytes endpoint serving file contents under `/directory/<path>`. - `src/components/` — ported `default`-theme listing and per-filekind views. - `config/filekinds.yml` — extension → kind → view mapping (from upstream). - `content/examples/` — bundled fixture exercising every convention. - `docs/` — port plan and reference: [ROADMAP](docs/ROADMAP.md), the [deployment ADR](docs/ADR-deployment.md), and the stack-agnostic [behavior specs](docs/spec/) extracted from the original PHP engine.

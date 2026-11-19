@@ -606,6 +606,18 @@ test("xmp: place properties are matched by namespace URI, not a fixed prefix", a
   assert.ok(!out.includes("Greenwich") && !out.includes("LEAKLAND"));
 });
 
+test("jpeg: stray bytes between header segments are skipped like libjpeg; hidden EXIF still throws", async () => {
+  const src = await sharp({ create: { width: 8, height: 8, channels: 3, background: "#33c" } })
+    .withXmp(XMP).jpeg().toBuffer();
+  const app0End = 4 + src.readUInt16BE(4); // SOI (2) + marker (2) + APP0 length
+  assert.equal(src[app0End], 0xff);
+  const stray = Buffer.concat([src.subarray(0, app0End), Buffer.from([0, 0]), src.subarray(app0End)]);
+  const out = publishedBytes("x/stray.jpg", stray, "location");
+  assert.ok(!out.includes("Greenwich") && !out.includes("51,28.7N"), "XMP place scrubbed after resync");
+  const hidden = Buffer.concat([src.subarray(0, app0End), Buffer.from("Exif\0\0", "latin1"), src.subarray(app0End)]);
+  assert.throws(() => publishedBytes("x/hidden.jpg", hidden, "location"), /skipped bytes hold metadata/);
+});
+
 test("xmp: creator postal address and DJI drone position are blanked", async () => {
   const xmp = XMP.replace(
     'xmlns:dc="http://purl.org/dc/elements/1.1/" ',

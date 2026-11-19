@@ -646,8 +646,18 @@ function parseJpeg(b: Buffer, from = 0): ParsedJpeg {
   for (;;) {
     if (p >= b.length) return cut();
     if (b[p] !== 0xff) {
-      need(sawScan, "JPEG segment structure is corrupt before the image data");
-      return { segs, eoiEnd: b.length, lostAt: p };
+      if (sawScan) return { segs, eoiEnd: b.length, lostAt: p };
+      // Stray bytes between header segments ("extraneous bytes before marker"):
+      // libjpeg skips to the next 0xFF and decodes the file, so do the same, as
+      // long as the skipped bytes can't hide metadata.
+      const next = b.indexOf(0xff, p);
+      need(
+        !METADATA_SIGNATURES.some((sig) => b.subarray(p, next === -1 ? b.length : next).includes(sig, 0, "latin1")),
+        "JPEG segment structure is corrupt before the image data, and the skipped bytes hold metadata",
+      );
+      if (next === -1) return cut();
+      p = next;
+      continue;
     }
     while (p < b.length && b[p] === 0xff) p++; // fill bytes
     if (p >= b.length) return cut();

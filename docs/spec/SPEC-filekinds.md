@@ -108,6 +108,11 @@ markup was inlined into the page.
 - `jpeg` is still not in the list (upstream had `jpg` only), so `.jpeg` files keep the
   download box even though `gen-thumbs` thumbnails them. Not changed here.
 
+**Published image bytes have their location removed.** Whatever the kind, every
+`jpg, jpeg, png, webp, avif, heic, heif, tif, tiff, gif` file the `/directory/` route
+publishes goes through `src/lib/stripMetadata.ts` first (GPS EXIF, XMP and IPTC place
+fields). Pixels are not re-encoded. Settings and behaviour: SPEC-config §2b.
+
 ### Audio / video kinds
 
 | Kind  | Extensions                                      | Icon  | View        | Display             | Instructions                                                        |

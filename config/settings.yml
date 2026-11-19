@@ -45,3 +45,13 @@ text_rendering: HTML
 ### Thumbnails will not be generated for image files larger than cap
 
 thumbnail_max_filesize: 10
+
+### IMAGE METADATA
+### Published images have their location removed (EXIF GPS, XMP, IPTC).
+### Your content files are never changed, only the copies in the build.
+### strip_location: false publishes images exactly as they are.
+### strip_all_metadata: true removes all metadata except colour profile and orientation.
+### Use only true or false: any other value stops the build.
+
+strip_location: true
+strip_all_metadata: false

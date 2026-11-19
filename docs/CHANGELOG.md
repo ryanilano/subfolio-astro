@@ -9,6 +9,18 @@ PHP app on the same content fixture.
 
 ### Added
 
+- **Location data is removed from published images, on by default.** The `/directory/`
+  route used to copy content files byte for byte, so photos shipped with their GPS
+  EXIF. Every published file whose bytes are a JPEG, PNG, WebP, GIF, TIFF (DNG
+  included) or HEIF/AVIF, whatever its extension, now has its EXIF GPS, XMP place
+  fields, IPTC place datasets, GeoTIFF tags and motion-photo movie position blanked in
+  place, without re-encoding: pixels, ICC profile and Orientation are unchanged. Images
+  inside generated `.oplx` zips get the same treatment. New `settings.yml` keys
+  `strip_location` (default `true`) and `strip_all_metadata` (default `false`, removes
+  all metadata except ICC and Orientation); any value other than true/false stops the
+  build. A recognised image whose metadata can't be parsed safely stops the build with
+  its path. Pure TypeScript, no new dependency, no system binaries. See SPEC-config §2b.
+
 - **Textile text rendering.** `SUBFOLIO_TEXT_RENDERING=textile` now renders Textile
   instead of falling back to plain text with a warning, so folders written for
   original Subfolio (which defaulted to Textile) show `h1. Field Notes - Summer Edition` as a

@@ -65,6 +65,8 @@ export interface FileViewData {
   rawsize: number;
   /** Comment text. */
   comment: string;
+  /** Alt text from the .info sidecar's optional `alt:` key; empty when unset. */
+  alt: string;
   /** Autoplay flag (for vid/snd). */
   autoplay: string;
   /** Human-readable kind label from filekinds.yml. */
@@ -161,6 +163,7 @@ export async function buildFileViewData(
 
   // Comment from enhancer payloads, else the sibling .info sidecar
   const comment = file.link?.comment ?? file.popup?.comment ?? file.comment ?? "";
+  const alt = file.alt ?? "";
 
   // Link / target resolution
   let link: string;
@@ -234,6 +237,7 @@ export async function buildFileViewData(
     size: formatSize(rawsize),
     rawsize,
     comment,
+    alt,
     autoplay: "",
     kindLabel: file.display,
     extension,

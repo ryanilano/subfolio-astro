@@ -161,9 +161,12 @@ export class ContentTree {
       const absPath = join(absDir, name);
       const kind = this.classify(absPath);
       if (kind === null) continue;
-      if (kind.isDir && kind.real !== null) {
+      if (kind.isDir) {
+        // A plain folder can close a cycle too when relDir was reached through
+        // a link (r/w -> y/name, with y/name/up -> ..), so check every folder.
+        // A plain folder's real path is here/name: no extra syscall.
         ancestors ??= this.chain(relDir);
-        if (ancestors.includes(kind.real)) continue;
+        if (ancestors.includes(kind.real ?? join(here, name))) continue;
       }
       const relPath = relDir ? `${relDir}/${name}` : name;
       out.push({ name, relPath, absPath, isDir: kind.isDir, isFile: kind.isFile });

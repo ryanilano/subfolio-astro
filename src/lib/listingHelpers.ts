@@ -5,7 +5,8 @@
  * Phase 2: size/date come from fs stat when possible; access/restricted are
  * deferred (Phase 4); new/updated tags are deferred (Phase 3).
  */
-import { readdirSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
+import { ContentTree } from "./contentWalk.ts";
 import { join } from "node:path";
 import type { FolderEntry, ChildFile, ChildFolder } from "../loaders/schema.ts";
 import type { Options } from "./site.ts";
@@ -60,23 +61,17 @@ export interface ListingContext {
   folderPath: string;
 }
 
-/** Recursive byte total of a folder's contents (build-time, lenient). */
-function folderSizeBytes(abs: string): number {
+/**
+ * Recursive byte total of what a folder publishes (build-time, lenient): the
+ * same files the shared walker publishes (src/lib/contentWalk.ts), so .git and
+ * -access never count and in-root folder links do.
+ */
+function folderSizeBytes(contentRoot: string, relDir: string): number {
   let total = 0;
-  let entries;
-  try {
-    entries = readdirSync(abs, { withFileTypes: true });
-  } catch {
-    return 0;
-  }
-  for (const e of entries) {
-    const p = join(abs, e.name);
-    if (e.isDirectory()) total += folderSizeBytes(p);
-    else if (e.isFile()) {
-      try {
-        total += statSync(p).size;
-      } catch { /* unreadable file contributes nothing */ }
-    }
+  for (const rel of new ContentTree(contentRoot).walkFiles(relDir)) {
+    try {
+      total += statSync(join(contentRoot, rel)).size;
+    } catch { /* unreadable file contributes nothing */ }
   }
   return total;
 }
@@ -197,7 +192,7 @@ export function buildListingItems(
       // mtimes say when files were copied in, not when the work happened;
       // the year lives in the folder name instead.
       size: (() => {
-        const bytes = folderSizeBytes(join(ctx.contentRoot, folder.path));
+        const bytes = folderSizeBytes(ctx.contentRoot, folder.path);
         return bytes > 0 ? formatSize(bytes) : "—";
       })(),
       date: "—",

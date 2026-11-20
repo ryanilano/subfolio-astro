@@ -18,6 +18,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { ContentTree, isUnpublishable } from "../src/lib/contentWalk.ts";
 import { subfolioLoader } from "../src/loaders/index.ts";
+import { resolvePageImage } from "../src/lib/pageImage.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 let tmp; // scratch dir holding content/, outside/ and caches
@@ -74,6 +75,12 @@ before(() => {
   writeFileSync(join(content, "m1", "one.txt"), "1");
   symlinkSync("../m2", join(content, "m1", "to2"));
   symlinkSync("../m1", join(content, "m2", "to1"));
+  // A plain folder that closes a cycle once reached through a link (PR #35 review):
+  // ww -> yy/name, yy/name/up -> .. ; so ww/up/name is ww again.
+  mkdirSync(join(content, "yy", "name"), { recursive: true });
+  writeFileSync(join(content, "yy", "name", "n.txt"), "N");
+  symlinkSync("..", join(content, "yy", "name", "up"));
+  symlinkSync("yy/name", join(content, "ww"));
   // A folder's own .info sidecar that links out of the root.
   writeFileSync(join(tmp, "outside", "meta.info"), "title: CANARY_OUTSIDE_TITLE\n");
   symlinkSync("../outside/meta.info", join(content, "zeta.info"));
@@ -102,6 +109,16 @@ test("list(): drops dot names, -access and links out of the root", () => {
   assert.deepEqual(tree.list("escdir"), [], "a folder link out of the root lists as empty when asked directly");
   assert.ok(!tree.list("loop").some((e) => e.name === "x" || e.name === "y"), "self links are not listed as folders");
   assert.ok(tree.list("").some((e) => e.name === "a-alias" && e.isDir));
+  // Every folder list() returns can be entered (no dead folder links).
+  assert.ok(!tree.list("ww/up").some((e) => e.name === "name"), "plain folder closing a cycle is not listed");
+  const check = (rel, depth) => {
+    for (const e of tree.list(rel)) {
+      if (!e.isDir) continue;
+      assert.ok(tree.enterDir(e.relPath), `listed but refused: ${e.relPath}`);
+      if (depth < 6) check(e.relPath, depth + 1);
+    }
+  };
+  check("", 0);
 });
 
 test("walkFiles(): a symlink cycle is walked once and ends", () => {
@@ -184,4 +201,11 @@ test("gen-oplx: the zip carries no dot file and no escaping link target", () => 
   assert.ok(!bytes.includes("leak.txt"), "escaping link zipped");
   assert.ok(!bytes.includes("-access"), "-access zipped");
   assert.ok(bytes.includes("assets/z.txt"), "an in-root linked subfolder is zipped with its files");
+});
+
+test("resolvePageImage(): only files the raw route publishes", () => {
+  assert.deepEqual(resolvePageImage("visible.txt", "", content), { kind: "content", relPath: "visible.txt" });
+  for (const bad of ["escape.txt", ".git/notes.txt", "gitalias/notes.txt", "locked/-Access", "../outside/secret.txt", "dangling.txt"]) {
+    assert.equal(resolvePageImage(bad, "", content), null, bad);
+  }
 });

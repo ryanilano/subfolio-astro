@@ -36,10 +36,11 @@ import { resolve, join, dirname, basename } from "node:path";
 import { publishedBytes, STRIP_VERSION } from "../src/lib/stripMetadata.ts";
 import { imageStripMode } from "../src/lib/site.ts";
 import { ContentTree } from "../src/lib/contentWalk.ts";
+import { cacheRoot as cacheRootFor, sweepCache, canSweep, keepOnly } from "../src/lib/cachePaths.ts";
 
 // --- Config ---------------------------------------------------------------
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
-export const cacheRoot = resolve(process.env.SUBFOLIO_OPLX_CACHE ?? "./.oplx-cache");
+export const cacheRoot = cacheRootFor("oplx");
 // Shared publication policy (src/lib/contentWalk.ts): a zip never carries dot
 // files, -access, or the target of a symlink that leaves the content root.
 const tree = new ContentTree(contentRoot);
@@ -204,8 +205,20 @@ async function main() {
       skipped++;
     }
   }
+  // Drop zips (and their strip records) whose .oplx folder is gone, so a
+  // deleted folder's full contents stop shipping (src/lib/cachePaths.ts, F5).
+  let swept = 0;
+  if (canSweep("oplx", contentRoot)) {
+    const keep = new Set();
+    for (const rel of folders) {
+      keep.add(`${rel}.zip`);
+      const slash = rel.lastIndexOf("/");
+      keep.add(slash < 0 ? `.${rel}.zip.strip` : `${rel.slice(0, slash)}/.${rel.slice(slash + 1)}.zip.strip`);
+    }
+    swept = sweepCache(cacheRoot, keepOnly(cacheRoot, keep));
+  }
   console.log(
-    `[gen-oplx] ${folders.length} folder(s) → ${created} created, ${fresh} fresh, ${skipped} skipped (cache: ${cacheRoot})`,
+    `[gen-oplx] ${folders.length} folder(s) → ${created} created, ${fresh} fresh, ${skipped} skipped, ${swept} orphan(s) removed (cache: ${cacheRoot})`,
   );
 }
 

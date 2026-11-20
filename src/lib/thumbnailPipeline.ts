@@ -17,9 +17,10 @@
 import { readdir, stat } from "node:fs/promises";
 import { resolve, dirname, basename } from "node:path";
 import { autoThumbName } from "./thumbName.ts";
+import { cacheRoot as cacheRootFor } from "./cachePaths.ts";
 
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
-const cacheRoot = resolve(process.env.SUBFOLIO_THUMB_CACHE ?? "./.thumb-cache");
+const cacheRoot = cacheRootFor("thumb");
 
 // Site base path. import.meta.env is supplied by Vite (Astro); plain Node, which
 // runs the unit tests, has none, so fall back to the default base "/".

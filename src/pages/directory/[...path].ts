@@ -19,6 +19,7 @@ import { readFileSync } from "node:fs";
 import { resolve, extname } from "node:path";
 import { ContentTree, hasUnpublishableSegment } from "../../lib/contentWalk.ts";
 import { routeKey } from "../../lib/routeParam.ts";
+import { cacheRoot as cacheRootFor } from "../../lib/cachePaths.ts";
 import { imageStripMode } from "../../lib/site.ts";
 import { publishedBytes } from "../../lib/stripMetadata.ts";
 
@@ -26,13 +27,13 @@ const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examp
 // Pre-generated auto thumbnails live out-of-tree (scripts/gen-thumbs.mjs). They
 // are served under the same /directory/ namespace, so the route walker and GET
 // handler fall back to this cache for any path not present in the content root.
-const cacheRoot = resolve(process.env.SUBFOLIO_THUMB_CACHE ?? "./.thumb-cache");
+const thumbCacheRoot = cacheRootFor("thumb");
 // Pre-built .oplx zip artifacts (scripts/gen-oplx.mjs) live out-of-tree too,
 // served under the same /directory/ namespace at `<oplxFolder>.zip`.
-const oplxCacheRoot = resolve(process.env.SUBFOLIO_OPLX_CACHE ?? "./.oplx-cache");
+const oplxCacheRoot = cacheRootFor("oplx");
 // Pre-generated embed WebP siblings (scripts/gen-embeds.mjs), served under the
 // same /directory/ namespace at `<embedPath>.webp`.
-const embedCacheRoot = resolve(process.env.SUBFOLIO_EMBED_CACHE ?? "./.embed-cache");
+const embedCacheRoot = cacheRootFor("embed");
 
 /** Minimal extension → MIME map (mirrors the PHP mime_content_type table). */
 const MIME: Record<string, string> = {
@@ -90,7 +91,7 @@ const stripMode = imageStripMode;
  * blocked path 404s in dev and build alike) AND again in GET, which refuses a
  * blocked or uncontained path even if one ever reaches it.
  */
-const trees = [contentRoot, cacheRoot, oplxCacheRoot, embedCacheRoot].map((r) => new ContentTree(r));
+const trees = [contentRoot, thumbCacheRoot, oplxCacheRoot, embedCacheRoot].map((r) => new ContentTree(r));
 
 export function getStaticPaths() {
   // Union of content files and the pre-generated caches (thumbnails, .oplx

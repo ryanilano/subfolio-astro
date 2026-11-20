@@ -64,10 +64,18 @@ export function assetUrl(relPath: string): string {
   return `${import.meta.env.BASE_URL}directory/${encodePathParts(relPath)}`;
 }
 
-/** Detail/listing page URL for a "/"-relative content path. */
+/**
+ * Detail/listing page URL for a "/"-relative content path.
+ *
+ * A path holding "%", "#" or "?" gets a trailing slash, so the link points
+ * straight at its folder's index.html. Without it the host has to redirect to
+ * add the slash, and a host that builds that Location from the decoded path
+ * (`/c#d.txt/`) cuts the URL at "#" or "?". Other links are unchanged.
+ */
 export function pageUrl(relPath: string): string {
   if (relPath === "" || relPath === ".") return import.meta.env.BASE_URL;
-  return `${import.meta.env.BASE_URL}${encodePathParts(relPath)}`;
+  const slash = /[%#?]/.test(relPath) ? "/" : "";
+  return `${import.meta.env.BASE_URL}${encodePathParts(relPath)}${slash}`;
 }
 
 export interface Crumb {

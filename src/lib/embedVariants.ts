@@ -20,8 +20,9 @@
 import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { assetUrl } from "./routing.ts";
+import { cacheRoot as cacheRootFor } from "./cachePaths.ts";
 
-const cacheRoot = resolve(process.env.SUBFOLIO_EMBED_CACHE ?? "./.embed-cache");
+const cacheRoot = cacheRootFor("embed");
 
 /**
  * Candidate widths to probe. Must be a superset of gen-embeds.mjs' LADDER_WIDTHS;

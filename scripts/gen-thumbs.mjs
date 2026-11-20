@@ -27,6 +27,7 @@ import { loadSettings } from "../src/loaders/settings.ts";
 import { asNumber } from "../src/loaders/yaml.ts";
 import { autoThumbName } from "../src/lib/thumbName.ts";
 import { ContentTree } from "../src/lib/contentWalk.ts";
+import { cacheRoot as cacheRootFor, sweepExpected, canSweep, claimCache } from "../src/lib/cachePaths.ts";
 
 // --- Config (SPEC-thumbnails §3.2, §3.10) -------------------------------
 const THUMB_WIDTH = 320;
@@ -57,10 +58,24 @@ const THUMB_MAX_MB = asNumber(loadSettings(configDir).thumbnail_max_filesize, 1)
 const MAX_FILESIZE_BYTES = THUMB_MAX_MB * 1024 * 1024;
 
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
-export const cacheRoot = resolve(process.env.SUBFOLIO_THUMB_CACHE ?? "./.thumb-cache");
+export const cacheRoot = cacheRootFor("thumb");
 // Shared publication policy (src/lib/contentWalk.ts): no dot names, no
 // -access, no symlinks out of the root, each real folder walked once.
 const tree = new ContentTree(contentRoot);
+// Every cache file this run wants to exist, "/"-relative to cacheRoot. The
+// sweep at the end deletes everything else (src/lib/cachePaths.ts, audit F5).
+const expected = new Set();
+// Prefixes whose existing files the sweep must leave alone: a source that
+// failed this run (unreadable, sharp error) keeps its previous outputs rather
+// than losing them to one bad run.
+const protect = [];
+
+/** Cache path of a source's auto thumbnail, "/"-relative. */
+function thumbRelFor(relPath) {
+  const parent = dirname(relPath);
+  const thumbName = autoThumbName(basename(relPath));
+  return parent === "." ? `-thumbnails/${thumbName}` : `${parent}/-thumbnails/${thumbName}`;
+}
 
 /**
  * Recursively collect candidate source images, "/"-relative to contentRoot.
@@ -176,7 +191,10 @@ async function genOne(relPath) {
   // Staleness: skip if cached thumb is newer than source (SPEC §3.4).
   try {
     const thumbStat = statSync(absThumb);
-    if (thumbStat.mtime > srcStat.mtime) return "fresh";
+    if (thumbStat.mtime > srcStat.mtime) {
+      expected.add(thumbRel).add(`${thumbRel}.webp`).add(`${thumbRel}.avif`);
+      return "fresh";
+    }
   } catch {
     /* missing → generate */
   }
@@ -189,6 +207,7 @@ async function genOne(relPath) {
   try {
     meta = await sharp(absSource).metadata();
   } catch {
+    protect.push(thumbRel);
     return "skip";
   }
   const h = meta.height ?? 0;
@@ -211,6 +230,7 @@ async function genOne(relPath) {
     sharp(absSource).resize(resizeOpts).webp({ quality: 80 }).toFile(absThumb + ".webp"),
     sharp(absSource).resize(resizeOpts).avif({ quality: 55 }).toFile(absThumb + ".avif"),
   ]);
+  expected.add(thumbRel).add(`${thumbRel}.webp`).add(`${thumbRel}.avif`);
   return "created";
 }
 
@@ -237,6 +257,7 @@ async function genCustomOne(relPath) {
   try {
     meta = await sharp(absSource).metadata();
   } catch {
+    protect.push(`${relPath}.`);
     return "skip";
   }
   const srcWidth = meta.width ?? 0;
@@ -247,6 +268,9 @@ async function genCustomOne(relPath) {
   // one native-width rung so it receives a modern-format candidate.
   const fitting = CUSTOM_LADDER_WIDTHS.filter((w) => w <= srcWidth);
   const widths = fitting.length > 0 ? fitting : [srcWidth];
+  // Exactly these rungs, so a replaced, narrower original drops its old wide
+  // rungs instead of serving the old picture in the srcset.
+  for (const w of widths) expected.add(`${relPath}.${w}w.webp`).add(`${relPath}.${w}w.avif`);
 
   const ladder = {
     webp: widths.map((w) => ({
@@ -280,6 +304,11 @@ async function genCustomOne(relPath) {
 }
 
 async function main() {
+  // Mark the cache folder as ours (or learn it is someone else's: an explicit
+  // SUBFOLIO_THUMB_CACHE that already holds other files is never swept).
+  if (!claimCache("thumb", contentRoot)) {
+    console.warn(`[gen-thumbs] cache folder has no subfolio marker and already holds files, so it was not swept (stale files can keep publishing). Empty it once to opt in.`);
+  }
   const images = [];
   const customThumbs = [];
   walkImages("", images, customThumbs);
@@ -296,6 +325,7 @@ async function main() {
     } catch (err) {
       // Lenient, like the rest of the loader — one bad image won't break the build.
       console.warn(`[gen-thumbs] skipped ${rel}: ${err.message}`);
+      protect.push(thumbRelFor(rel));
       skip++;
     }
   }
@@ -311,12 +341,21 @@ async function main() {
       else cSkip++;
     } catch (err) {
       console.warn(`[gen-thumbs] skipped custom ${rel}: ${err.message}`);
+      protect.push(`${rel}.`);
       cSkip++;
     }
   }
 
+  // Drop anything this run did not ask for: a deleted image's thumbnails, a
+  // source now skipped (too small, too big, unreadable), a replaced custom
+  // thumbnail's old rungs (src/lib/cachePaths.ts, audit F5). canSweep() refuses
+  // a missing content root or a cache folder that overlaps content or another
+  // cache.
+  let swept = 0;
+  if (canSweep("thumb", contentRoot)) swept = sweepExpected(cacheRoot, expected, protect);
+
   console.log(
-    `[gen-thumbs] ${images.length} image(s) → ${created} generated, ${fresh} fresh, ${skip} skipped (cap: ${THUMB_MAX_MB} MB, cache: ${cacheRoot})`,
+    `[gen-thumbs] ${images.length} image(s) → ${created} generated, ${fresh} fresh, ${skip} skipped, ${swept} orphan(s) removed (cap: ${THUMB_MAX_MB} MB, cache: ${cacheRoot})`,
   );
   console.log(
     `[gen-thumbs] ${customThumbs.length} custom thumb(s) → ${cCreated} generated, ${cFresh} fresh, ${cSkip} skipped (variants only; originals untouched)`,

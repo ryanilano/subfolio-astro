@@ -21,11 +21,12 @@
  * Mirrors FileFolder::get_thumbnail_url() generation rules (SPEC-thumbnails §3).
  */
 import sharp from "sharp";
-import { readdirSync, statSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { statSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { resolve, join, dirname, basename } from "node:path";
 import { loadSettings } from "../src/loaders/settings.ts";
 import { asNumber } from "../src/loaders/yaml.ts";
 import { autoThumbName } from "../src/lib/thumbName.ts";
+import { ContentTree } from "../src/lib/contentWalk.ts";
 
 // --- Config (SPEC-thumbnails §3.2, §3.10) -------------------------------
 const THUMB_WIDTH = 320;
@@ -57,6 +58,9 @@ const MAX_FILESIZE_BYTES = THUMB_MAX_MB * 1024 * 1024;
 
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 export const cacheRoot = resolve(process.env.SUBFOLIO_THUMB_CACHE ?? "./.thumb-cache");
+// Shared publication policy (src/lib/contentWalk.ts): no dot names, no
+// -access, no symlinks out of the root, each real folder walked once.
+const tree = new ContentTree(contentRoot);
 
 /**
  * Recursively collect candidate source images, "/"-relative to contentRoot.
@@ -68,23 +72,9 @@ export const cacheRoot = resolve(process.env.SUBFOLIO_THUMB_CACHE ?? "./.thumb-c
  * rather than dropped.
  */
 function walkImages(relDir, out, customOut) {
-  const absDir = join(contentRoot, relDir);
-  let names;
-  try {
-    names = readdirSync(absDir);
-  } catch {
-    return;
-  }
-  for (const name of names) {
-    const relPath = relDir ? `${relDir}/${name}` : name;
-    const abs = join(absDir, name);
-    let st;
-    try {
-      st = statSync(abs);
-    } catch {
-      continue;
-    }
-    if (st.isDirectory()) {
+  if (!tree.enterDir(relDir)) return;
+  for (const { name, relPath, isDir } of tree.list(relDir)) {
+    if (isDir) {
       // The auto-thumbnail cache is generated output, never a source.
       if (name === "-thumbnails") continue;
       if (CUSTOM_THUMB_DIRS.has(name)) {
@@ -102,20 +92,9 @@ function walkImages(relDir, out, customOut) {
 
 /** Collect images directly inside a custom-thumbnail dir (non-recursive by design). */
 function walkCustomThumbs(relDir, out) {
-  const absDir = join(contentRoot, relDir);
-  let names;
-  try {
-    names = readdirSync(absDir);
-  } catch {
-    return;
-  }
-  for (const name of names) {
-    const abs = join(absDir, name);
-    try {
-      if (statSync(abs).isDirectory()) continue;
-    } catch {
-      continue;
-    }
+  if (!tree.enterDir(relDir)) return;
+  for (const { name, isFile } of tree.list(relDir)) {
+    if (!isFile) continue;
     const dot = name.lastIndexOf(".");
     const ext = dot >= 0 ? name.slice(dot).toLowerCase() : "";
     if (IMG_EXTS.has(ext)) out.push(`${relDir}/${name}`);

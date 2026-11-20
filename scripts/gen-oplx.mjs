@@ -25,7 +25,6 @@
 
 import { ZipArchive } from "archiver";
 import {
-  readdirSync,
   statSync,
   mkdirSync,
   createWriteStream,
@@ -36,12 +35,18 @@ import {
 import { resolve, join, dirname, basename } from "node:path";
 import { publishedBytes, STRIP_VERSION } from "../src/lib/stripMetadata.ts";
 import { imageStripMode } from "../src/lib/site.ts";
+import { ContentTree } from "../src/lib/contentWalk.ts";
 
 // --- Config ---------------------------------------------------------------
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 export const cacheRoot = resolve(process.env.SUBFOLIO_OPLX_CACHE ?? "./.oplx-cache");
+// Shared publication policy (src/lib/contentWalk.ts): a zip never carries dot
+// files, -access, or the target of a symlink that leaves the content root.
+const tree = new ContentTree(contentRoot);
 /** What a cached zip must have been built with to be reused. */
-const stripTag = `strip-v${STRIP_VERSION}:${imageStripMode ?? "none"}`;
+// `walk-v1`: zips made before the shared publication policy may carry dot files
+// or symlink targets, so bumping it rebuilds every cached zip once.
+const stripTag = `strip-v${STRIP_VERSION}:${imageStripMode ?? "none"}:walk-v1`;
 
 /** Dot-prefixed record of the strip mode a zip was built with (never served). */
 function stripRecord(absZip) {
@@ -52,16 +57,19 @@ class StripFailure extends Error {}
 
 /**
  * Collect the folder's entries, each file passed through the strip filter.
- * Sorted, dot files included (archive.directory did the same).
+ * Sorted. Only what the shared publication policy allows: no dot files (the
+ * old archive.directory() call zipped them), no -access, nothing reached
+ * through a symlink that leaves the content root, and no folder twice.
  */
-function collectEntries(absDir, relPath, prefix, out) {
-  for (const name of readdirSync(absDir).sort()) {
-    const abs = join(absDir, name);
+function collectEntries(relPath, prefix, out) {
+  const relDir = prefix ? `${relPath}/${prefix}` : relPath;
+  if (!tree.enterDir(relDir)) return out;
+  for (const { name, absPath: abs, isDir } of tree.list(relDir)) {
     const st = statSync(abs);
     const zipName = prefix ? `${prefix}/${name}` : name;
-    if (st.isDirectory()) {
+    if (isDir) {
       out.push({ name: `${zipName}/`, dir: true, date: st.mtime, mode: st.mode });
-      collectEntries(abs, relPath, zipName, out);
+      collectEntries(relPath, zipName, out);
     } else {
       let data;
       try {
@@ -75,54 +83,28 @@ function collectEntries(absDir, relPath, prefix, out) {
   return out;
 }
 
-/** Get the newest file mtime within a directory (recursive). */
-function newestMtime(absDir) {
+/**
+ * Newest mtime among the files a zip of this folder would contain (recursive,
+ * same publication policy as collectEntries).
+ */
+function newestMtime(relDir) {
   let newest = 0;
-  function walk(d) {
-    let names;
+  for (const rel of tree.walkFiles(relDir)) {
     try {
-      names = readdirSync(d);
+      const m = statSync(join(contentRoot, rel)).mtimeMs;
+      if (m > newest) newest = m;
     } catch {
-      return;
-    }
-    for (const name of names) {
-      const abs = join(d, name);
-      let st;
-      try {
-        st = statSync(abs);
-      } catch {
-        continue;
-      }
-      if (st.isDirectory()) {
-        walk(abs);
-      } else {
-        if (st.mtimeMs > newest) newest = st.mtimeMs;
-      }
+      /* vanished mid-walk → ignore */
     }
   }
-  walk(absDir);
   return newest;
 }
 
 /** Recursively collect .oplx folder paths, "/"-relative to contentRoot. */
 function walkOplx(relDir, out) {
-  const absDir = join(contentRoot, relDir);
-  let names;
-  try {
-    names = readdirSync(absDir);
-  } catch {
-    return;
-  }
-  for (const name of names) {
-    const relPath = relDir ? `${relDir}/${name}` : name;
-    const abs = join(absDir, name);
-    let st;
-    try {
-      st = statSync(abs);
-    } catch {
-      continue;
-    }
-    if (st.isDirectory()) {
+  if (!tree.enterDir(relDir)) return;
+  for (const { name, relPath, isDir } of tree.list(relDir)) {
+    if (isDir) {
       // Skip the cache dirs — they aren't source folders.
       if (
         name === "-thumbnails" ||
@@ -142,12 +124,11 @@ function walkOplx(relDir, out) {
 
 /** Generate one .oplx zip into the cache. Returns "created" | "fresh" | "skip". */
 async function genOne(relPath) {
-  const absSource = join(contentRoot, relPath);
   // Mirror the content tree so the served URL is exactly `<relPath>.zip`
   // (the /directory route resolves requests by relative path against the cache).
   const absZip = join(cacheRoot, `${relPath}.zip`);
 
-  const sourceMtime = newestMtime(absSource);
+  const sourceMtime = newestMtime(relPath);
 
   // Staleness: reuse the cached zip only if it is newer than the source folder
   // AND was built with the current strip mode.
@@ -164,7 +145,7 @@ async function genOne(relPath) {
   // it may predate stripping.
   let entries;
   try {
-    entries = collectEntries(absSource, relPath, "", []);
+    entries = collectEntries(relPath, "", []);
   } catch (err) {
     if (err instanceof StripFailure) {
       rmSync(absZip, { force: true });

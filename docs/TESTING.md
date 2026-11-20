@@ -44,8 +44,8 @@ component renders (see AGENTS.md) — always load the page.
 | G1 | Header logo + "Index of …" breadcrumb render | ⬜ | |
 | G2 | Breadcrumb segments are clickable and resolve to the right folder | ⬜ | |
 | G3 | Prev/next nav (`← →`) points at sibling folders in sort order | ⬜ | |
-| G4 | Footer ("© Subfolio", updated-since) renders | ⬜ | |
-| G5 | Root `-t-introduction.txt` (top) + `-b-footer.txt` (bottom) embeds show on `/` | ⬜ | |
+| G4 | Footer (copyright "by Ryan Ilano", the AREA17 and AGPL-3.0 credit line, updated-since) renders | ⬜ | |
+| G5 | Root `-t-introduction.txt` (top) embed shows on `/`; the root has no bottom embed (the credit lives in the footer) | ⬜ | |
 | G6 | `-hidden/` dir is absent from every plain listing | ⬜ | |
 | G7 | Raw bytes serve at `/directory/<path>` (open an image's `/directory/...` URL directly) | ✅ | smoke.encoding.test.mjs; dot-entries + `-access` are blocked by design (Findings #3) |
 | G8 | A bogus path (e.g. `/does-not-exist`) returns the 404 page | ⬜ | |
@@ -64,7 +64,7 @@ Conventions: top/bottom embeds, hidden dir, `.cut` shortcut.
 | # | Check | Status | Notes |
 |---|---|---|---|
 | R1 | `-t-introduction.txt` renders as top embed | ⬜ | |
-| R2 | `-b-footer.txt` renders as bottom embed | ⬜ | |
+| R2 | Footer shows the AGPL-3.0 credit line (it replaced the root `-b-footer.txt` bottom embed); bottom embeds are checked in `01_embedding_text_images/` | ⬜ | |
 | R3 | `hiding_content.cut` appears as a shortcut/related item | ⬜ | |
 | R4 | `markdown_cheat_sheet.txt` is listed as a normal file | ⬜ | |
 | R5 | `-hidden/` does not appear | ⬜ | |

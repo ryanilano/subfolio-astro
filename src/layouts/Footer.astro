@@ -27,7 +27,7 @@ const credit = siteConfig.site_footer_credit || "";
 ---
 
 <footer class="footer" id="footer">
-  <div class="footer__copyright">
+  <div class:list={["footer__copyright", credit && "footer__copyright--credit"]}>
     {displayCopyright && copy && <span class="copyright__text">{copy}</span>}
     {credit && <span class="footer__credit" set:html={credit} />}
   </div>
@@ -64,5 +64,23 @@ const credit = siteConfig.site_footer_credit || "";
   }
   .footer__credit :global(.footer__sep) {
     margin-right: 0.35em;
+  }
+  /* With the copyright hidden (display_copyright: false) the credit comes
+     first in the row, so a leading separator in site_footer_credit would
+     dangle. Hide it; configs keep their separator markup unchanged. */
+  .footer__credit:first-child :global(.footer__sep:first-child) {
+    display: none;
+  }
+  /* The theme gives footer spans a fixed bar height (70px in the default
+     theme). With a credit that wraps on narrow screens, that tall first
+     line leaves a gap before the next one, so the copyright sizes to its
+     text here (its top spacing stays) and the row gets a little bottom
+     room instead. Desktop is unchanged: the updated-since links on the
+     right still set the bar height. */
+  .footer__copyright--credit .copyright__text {
+    height: auto;
+  }
+  .footer__copyright--credit {
+    padding-bottom: 0.75em;
   }
 </style>

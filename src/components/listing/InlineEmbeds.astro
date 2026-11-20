@@ -140,7 +140,7 @@ const imageItems = await Promise.all(
         <li class="standard_paragraph item">
           <h4>{item.title}</h4>
           <p>{item.description}</p>
-          <p><a target="_blank" href={item.link}>Read more</a></p>
+          {item.link && <p><a target="_blank" rel="noopener noreferrer" href={item.link}>Read more</a></p>}
         </li>
       ))}
     </ul>

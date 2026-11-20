@@ -31,6 +31,24 @@ function cacheFileFor(feedurl: string): string {
   return join(cacheRoot, `${hash}.json`);
 }
 
+/**
+ * A feed item's link, or "" unless it is an absolute http(s) URL. The feed
+ * publisher is not the site author, so a `javascript:` or `data:` link must
+ * never reach an href (audit finding F3, 2026-11-15). Applied when gen-rss
+ * writes the cache AND here when it is read, so a cache written before the
+ * fix is cleaned too.
+ */
+export function webLink(link: unknown): string {
+  if (typeof link !== "string") return "";
+  const v = link.trim();
+  if (!URL.canParse(v)) return "";
+  // Return the parsed form: "https:example.com" or a control character would
+  // otherwise reach the href as typed and resolve as a path on this site.
+  if (!/^https?:\/\//i.test(v)) return "";
+  const url = new URL(v);
+  return url.protocol === "http:" || url.protocol === "https:" ? url.href : "";
+}
+
 // Build-time memo: a given feed is read off disk once per build.
 const cache = new Map<string, RssItem[]>();
 
@@ -46,7 +64,7 @@ export function rssItemsFor(feedurl: string, count = 10): RssItem[] {
     items = [];
     try {
       const entry = JSON.parse(readFileSync(cacheFileFor(feedurl), "utf8")) as CacheEntry;
-      if (Array.isArray(entry.items)) items = entry.items;
+      if (Array.isArray(entry.items)) items = entry.items.map((it) => ({ ...it, link: webLink(it.link) }));
     } catch {
       /* missing / malformed cache → empty list */
     }

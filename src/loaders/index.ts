@@ -19,6 +19,7 @@ import { parseLink, parsePop, parseFeature, parseCut } from "./enhancers.ts";
 import { parseSubfolioYaml, asString } from "./yaml.ts";
 import { parseAccess } from "./access.ts";
 import { ContentTree } from "../lib/contentWalk.ts";
+import { cacheRoot } from "../lib/cachePaths.ts";
 import { folderEntrySchema, type ChildFile, type ChildFolder, type Feature, type Related } from "./schema.ts";
 
 /**
@@ -46,7 +47,7 @@ const cfg = DEFAULT_CONVENTION_CONFIG;
 
 // Out-of-tree WebP cache for position embeds (scripts/gen-embeds.mjs). Mirrors
 // that script's env default so the loader and the encoder agree on the location.
-const embedCacheRoot = resolve(process.env.SUBFOLIO_EMBED_CACHE ?? "./.embed-cache");
+const embedCacheRoot = cacheRoot("embed");
 
 export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
   const contentRoot = resolve(opts.contentDir);

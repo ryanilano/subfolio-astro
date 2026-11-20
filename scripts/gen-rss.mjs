@@ -24,6 +24,7 @@ import { resolve, join } from "node:path";
 import { createHash } from "node:crypto";
 import { parse as parseYaml } from "yaml";
 import { ContentTree } from "../src/lib/contentWalk.ts";
+import { webLink } from "../src/lib/rssFeed.ts";
 
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 const cacheRoot = resolve(process.env.SUBFOLIO_RSS_CACHE ?? "./.rss-cache");
@@ -101,7 +102,8 @@ async function fetchItems(feedurl, count) {
     (feed.items ?? []).slice(0, count).map((it) => ({
       title: it.title ?? "",
       description: it.contentSnippet ?? it.content ?? it.summary ?? "",
-      link: it.link ?? "",
+      // Only absolute http(s) links: the feed publisher is not trusted (F3).
+      link: webLink(it.link),
     }));
   try {
     return normalize(await parser.parseURL(feedurl));

@@ -23,6 +23,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, realpathSync, renameSync, rmdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
+import { isUnpublishable } from "./contentWalk.ts";
 
 export type CacheKind = "thumb" | "embed" | "oplx";
 
@@ -103,15 +104,17 @@ export function claimCache(kind: CacheKind, root: string = contentDir()): boolea
 /**
  * May a gen-* script sweep this kind's cache? Only when the folder carries this
  * kind's ownership marker (claimCache), the content root exists and holds
- * at least one non-dot entry (an unmounted volume would otherwise read as "everything deleted"), and
+ * at least one publishable entry (an unmounted volume would otherwise read as "everything deleted"), and
  * the cache folder does not overlap the content root or another kind's cache.
  */
 export function canSweep(kind: CacheKind, root: string = contentDir()): boolean {
   if (!existsSync(root)) return false;
   try {
-    // Dot entries never publish, so a root holding only .git (a half-failed
-    // clone) counts as empty too.
-    if (!readdirSync(root).some((n) => !n.startsWith("."))) return false;
+    // Entries that never publish (dot names, -access) don't count, so a root
+    // holding only .git (a half-failed clone) reads as empty too. A clone that
+    // stops partway with some visible files still passes; the sweep then drops
+    // outputs of whatever is missing, and the next good run rebuilds them.
+    if (!readdirSync(root).some((n) => !isUnpublishable(n))) return false;
   } catch {
     return false;
   }

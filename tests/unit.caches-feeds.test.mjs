@@ -243,12 +243,13 @@ test("an empty content root (unmounted volume) sweeps nothing", () => {
   assert.ok(existsSync(zip), "cache swept against an empty content root");
 });
 
-test("a content root holding only dot entries (half-failed clone) sweeps nothing", () => {
+test("a content root holding only unpublishable entries (.git, -access) sweeps nothing", () => {
   const dotOnly = join(tmp, "dot-only");
   mkdirSync(join(dotOnly, ".git"), { recursive: true });
+  writeFileSync(join(dotOnly, "-access"), "users: [a]\n");
   const zip = join(caches, "oplx", "keep.oplx.zip");
   assert.ok(existsSync(zip));
   assert.equal(canSweep("oplx", dotOnly), false);
   run("gen-oplx.mjs", { SUBFOLIO_CONTENT_DIR: dotOnly });
-  assert.ok(existsSync(zip), "cache swept against a root with only .git");
+  assert.ok(existsSync(zip), "cache swept against a root with only .git and -access");
 });

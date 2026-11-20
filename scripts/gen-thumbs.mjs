@@ -306,7 +306,9 @@ async function genCustomOne(relPath) {
 async function main() {
   // Mark the cache folder as ours (or learn it is someone else's: an explicit
   // SUBFOLIO_THUMB_CACHE that already holds other files is never swept).
-  claimCache("thumb", contentRoot);
+  if (!claimCache("thumb", contentRoot)) {
+    console.warn(`[gen-thumbs] cache folder has no subfolio marker and already holds files, so it was not swept (stale files can keep publishing). Empty it once to opt in.`);
+  }
   const images = [];
   const customThumbs = [];
   walkImages("", images, customThumbs);

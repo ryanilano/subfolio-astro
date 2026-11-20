@@ -56,6 +56,10 @@ export function hasStandIn(value: string): boolean {
  * request to the real name and matches it against the keys, and it writes no
  * files, so dev keys are the real paths (stand-ins there would 404 every name
  * with "%", "#" or "?").
+ * Dev limit: a real name holding a valid escape sequence (for example a%20b.txt)
+ * cannot be served by `astro dev`, which decodes the request until it stops
+ * changing, so it returns 500 NoMatchingStaticPathFound. The static build is
+ * correct for these names; the dev 500 is not a build bug.
  */
 export function routeKey(relPath: string, dev: boolean): string {
   return dev ? relPath : toParam(relPath);

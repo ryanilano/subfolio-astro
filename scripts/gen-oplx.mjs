@@ -180,7 +180,9 @@ async function genOne(relPath) {
 }
 
 async function main() {
-  claimCache("oplx", contentRoot); // marks the folder as ours, or leaves a foreign one unswept
+  if (!claimCache("oplx", contentRoot)) {
+    console.warn(`[gen-oplx] cache folder has no subfolio marker and already holds files, so it was not swept (stale files can keep publishing). Empty it once to opt in.`);
+  }
   const folders = [];
   walkOplx("", folders);
 

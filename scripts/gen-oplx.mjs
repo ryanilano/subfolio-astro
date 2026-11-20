@@ -36,7 +36,7 @@ import { resolve, join, dirname, basename } from "node:path";
 import { publishedBytes, STRIP_VERSION } from "../src/lib/stripMetadata.ts";
 import { imageStripMode } from "../src/lib/site.ts";
 import { ContentTree } from "../src/lib/contentWalk.ts";
-import { cacheRoot as cacheRootFor, sweepCache, canSweep, keepOnly } from "../src/lib/cachePaths.ts";
+import { cacheRoot as cacheRootFor, sweepExpected, canSweep, claimCache } from "../src/lib/cachePaths.ts";
 
 // --- Config ---------------------------------------------------------------
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
@@ -180,6 +180,7 @@ async function genOne(relPath) {
 }
 
 async function main() {
+  claimCache("oplx", contentRoot); // marks the folder as ours, or leaves a foreign one unswept
   const folders = [];
   walkOplx("", folders);
 
@@ -215,7 +216,7 @@ async function main() {
       const slash = rel.lastIndexOf("/");
       keep.add(slash < 0 ? `.${rel}.zip.strip` : `${rel.slice(0, slash)}/.${rel.slice(slash + 1)}.zip.strip`);
     }
-    swept = sweepCache(cacheRoot, keepOnly(cacheRoot, keep));
+    swept = sweepExpected(cacheRoot, keep);
   }
   console.log(
     `[gen-oplx] ${folders.length} folder(s) → ${created} created, ${fresh} fresh, ${skipped} skipped, ${swept} orphan(s) removed (cache: ${cacheRoot})`,

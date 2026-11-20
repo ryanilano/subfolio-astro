@@ -36,7 +36,7 @@ import { statSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { resolve, join, dirname } from "node:path";
 import { positionOf } from "../src/loaders/conventions.ts";
 import { ContentTree } from "../src/lib/contentWalk.ts";
-import { cacheRoot as cacheRootFor, sweepCache, canSweep, keepOnly } from "../src/lib/cachePaths.ts";
+import { cacheRoot as cacheRootFor, sweepExpected, canSweep, claimCache } from "../src/lib/cachePaths.ts";
 
 // --- Config -------------------------------------------------------------
 const WEBP_QUALITY = 90; // high bar: embeds are hero imagery (thumbs use 80)
@@ -58,6 +58,8 @@ const tree = new ContentTree(contentRoot);
 // Every cache file this run wants, "/"-relative to cacheRoot; the sweep at the
 // end deletes everything else (src/lib/cachePaths.ts, audit F5).
 const expected = new Set();
+// A source that failed this run keeps its previous outputs (see gen-thumbs).
+const protect = [];
 
 /** Recursively collect position-prefixed embed images, "/"-relative to contentRoot. */
 function walkEmbeds(relDir, out) {
@@ -162,6 +164,7 @@ async function genOne(relPath) {
   try {
     meta = await sharp(absSource).metadata();
   } catch {
+    protect.push(`${relPath}.`);
     return "skip";
   }
   const srcWidth = meta.width ?? 0;
@@ -216,6 +219,7 @@ async function genOne(relPath) {
 }
 
 async function main() {
+  claimCache("embed", contentRoot); // marks the folder as ours, or leaves a foreign one unswept
   const embeds = [];
   walkEmbeds("", embeds);
 
@@ -231,13 +235,14 @@ async function main() {
     } catch (err) {
       // Lenient, like the rest of the loader — one bad image won't break the build.
       console.warn(`[gen-embeds] skipped ${rel}: ${err.message}`);
+      protect.push(`${rel}.`);
       skip++;
     }
   }
   // Drop outputs this run did not ask for: a deleted embed's, or a replaced
   // embed's old rungs (src/lib/cachePaths.ts, audit F5).
   let swept = 0;
-  if (canSweep("embed", contentRoot)) swept = sweepCache(cacheRoot, keepOnly(cacheRoot, expected));
+  if (canSweep("embed", contentRoot)) swept = sweepExpected(cacheRoot, expected, protect);
   console.log(
     `[gen-embeds] ${embeds.length} embed(s) → ${created} generated, ${fresh} fresh, ${skip} skipped, ${swept} orphan(s) removed (cache: ${cacheRoot})`,
   );

@@ -13,7 +13,7 @@
  */
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, realpathSync, utimesSync, renameSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, realpathSync, utimesSync, renameSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -196,12 +196,49 @@ test("rssItemsFor cleans links in a cache written before the fix", async () => {
   assert.deepEqual(items.map((i) => i.link), ["", "https://example.com/post"]);
 });
 
-test("a case-only rename keeps its artifacts on a case-insensitive disk", async (t) => {
+test("a case-only rename renames its artifacts to the new case on a case-insensitive disk", async (t) => {
   const { caseInsensitive } = await import("../src/lib/cachePaths.ts");
   if (!caseInsensitive(tmp)) return t.skip("case-sensitive disk");
   renameSync(join(content, "gal", "keep.png"), join(content, "gal", "Keep.png"));
   run("gen-thumbs.mjs");
-  const dir = join(caches, "thumb", "gal", "-thumbnails");
-  assert.ok(existsSync(join(dir, "Keep.png")), "thumbnail lost after a case-only rename");
-  assert.ok(existsSync(join(dir, "Keep.png.avif")));
+  // existsSync ignores case here, so compare the names actually on disk.
+  const names = readdirSync(join(caches, "thumb", "gal", "-thumbnails"));
+  for (const n of ["Keep.png", "Keep.png.webp", "Keep.png.avif"]) assert.ok(names.includes(n), `missing ${n}: ${names.join(", ")}`);
+  assert.ok(!names.some((n) => n.startsWith("keep.png")), `old-case name kept: ${names.join(", ")}`);
+});
+
+test("an explicit cache folder that already holds other files is never swept", () => {
+  const foreign = join(tmp, "foreign");
+  mkdirSync(join(foreign, "project"), { recursive: true });
+  writeFileSync(join(foreign, "notes.txt"), "important");
+  writeFileSync(join(foreign, "project", "main.c"), "x");
+  for (const s of ["gen-thumbs.mjs", "gen-embeds.mjs", "gen-oplx.mjs"]) {
+    const key = { "gen-thumbs.mjs": "SUBFOLIO_THUMB_CACHE", "gen-embeds.mjs": "SUBFOLIO_EMBED_CACHE", "gen-oplx.mjs": "SUBFOLIO_OPLX_CACHE" }[s];
+    run(s, { [key]: foreign });
+    assert.equal(readFileSync(join(foreign, "notes.txt"), "utf8"), "important", `${s} swept a foreign folder`);
+    assert.ok(existsSync(join(foreign, "project", "main.c")), `${s} swept a foreign folder`);
+  }
+  assert.ok(!readdirSync(foreign).some((n) => n.startsWith(".subfolio-cache-")), "foreign folder was claimed");
+});
+
+test("a source that fails to decode keeps its previous outputs", () => {
+  const thumbDir = join(caches, "thumb", "gal", "-thumbnails");
+  const before = readdirSync(thumbDir).filter((n) => /^keep\.png/i.test(n));
+  assert.ok(before.length >= 3, `need keep.png thumbnails first: ${before}`);
+  const src = readdirSync(join(content, "gal")).find((n) => /^keep\.png$/i.test(n));
+  const later = new Date(Date.now() + 10_000);
+  writeFileSync(join(content, "gal", src), "not an image");
+  utimesSync(join(content, "gal", src), later, later);
+  run("gen-thumbs.mjs");
+  const after = readdirSync(thumbDir).filter((n) => /^keep\.png/i.test(n));
+  assert.deepEqual(after.sort(), before.sort(), "a decode failure swept the previous thumbnails");
+});
+
+test("an empty content root (unmounted volume) sweeps nothing", () => {
+  const empty = join(tmp, "empty-mount");
+  mkdirSync(empty);
+  const zip = join(caches, "oplx", "keep.oplx.zip");
+  assert.ok(existsSync(zip));
+  run("gen-oplx.mjs", { SUBFOLIO_CONTENT_DIR: empty });
+  assert.ok(existsSync(zip), "cache swept against an empty content root");
 });

@@ -21,7 +21,7 @@
  * directly under Node's type stripping.
  */
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, realpathSync, rmdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, realpathSync, renameSync, rmdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 
 export type CacheKind = "thumb" | "embed" | "oplx";
@@ -72,16 +72,50 @@ function within(a: string, b: string): boolean {
   return a === b || a.startsWith(b.endsWith(sep) ? b : b + sep);
 }
 
+/** Dot-prefixed ownership marker a generator leaves in its cache folder (never published). */
+export function markerName(kind: CacheKind): string {
+  return `.subfolio-cache-${kind}`;
+}
+
 /**
- * May a gen-* script sweep this kind's cache? Only when the cache folder is its
- * own: not the content root, not inside it, not holding it, and not overlapping
- * another kind's cache (an explicit SUBFOLIO_*_CACHE can point anywhere, and a
- * sweep there would delete content or another cache's files). Also false when
- * the content root is missing, so a typo can't wipe a cache.
+ * Claim this kind's cache folder before writing to it: leave the ownership
+ * marker when the folder is the default keyed one, or is new, or is empty.
+ * An explicit SUBFOLIO_*_CACHE that already holds other files is never
+ * claimed, so it is never swept (canSweep() requires the marker).
+ */
+export function claimCache(kind: CacheKind, root: string = contentDir()): boolean {
+  const dir = cacheRoot(kind, root);
+  const marker = join(dir, markerName(kind));
+  if (existsSync(marker)) return true;
+  const explicit = Boolean(process.env[SETTINGS[kind].env]);
+  let empty = true;
+  try {
+    empty = readdirSync(dir).length === 0;
+  } catch {
+    empty = true; // missing → ours to create
+  }
+  if (explicit && !empty) return false;
+  mkdirSync(dir, { recursive: true, mode: 0o755 });
+  writeFileSync(marker, `subfolio ${kind} cache: a gen-* script may delete anything here that the content does not produce.\n`);
+  return true;
+}
+
+/**
+ * May a gen-* script sweep this kind's cache? Only when the folder carries this
+ * kind's ownership marker (claimCache), the content root exists and is not
+ * empty (an unmounted volume would otherwise read as "everything deleted"), and
+ * the cache folder does not overlap the content root or another kind's cache.
  */
 export function canSweep(kind: CacheKind, root: string = contentDir()): boolean {
   if (!existsSync(root)) return false;
-  const cache = realish(cacheRoot(kind, root));
+  try {
+    if (readdirSync(root).length === 0) return false;
+  } catch {
+    return false;
+  }
+  const dir = cacheRoot(kind, root);
+  if (!existsSync(join(dir, markerName(kind)))) return false;
+  const cache = realish(dir);
   const content = realish(root);
   if (within(cache, content) || within(content, cache)) return false;
   for (const other of Object.keys(SETTINGS) as CacheKind[]) {
@@ -94,8 +128,7 @@ export function canSweep(kind: CacheKind, root: string = contentDir()): boolean 
 
 /**
  * True when the disk under `dir` ignores letter case (macOS, Windows default).
- * There a case-only rename leaves the old cache file serving the new name, so
- * the sweep must compare names without case.
+ * There a case-only rename leaves the cached file under its old name.
  */
 export function caseInsensitive(dir: string): boolean {
   const real = realish(dir);
@@ -105,13 +138,57 @@ export function caseInsensitive(dir: string): boolean {
 }
 
 /**
- * Keep-test over an exact set of "/"-relative paths, folding case when the
- * cache sits on a case-insensitive disk.
+ * On a case-insensitive disk, rename cache folders and files whose names match
+ * an expected path only without case (a case-only rename of the source) to the
+ * exact expected case, folders first. Otherwise the generator sees the old file
+ * as fresh and the raw route publishes it under its old name, which 404s on a
+ * case-sensitive host.
  */
-export function keepOnly(root: string, expected: Set<string>): (relPath: string) => boolean {
-  if (!caseInsensitive(root)) return (rel) => expected.has(rel);
-  const folded = new Set([...expected].map((p) => p.toLowerCase()));
-  return (rel) => folded.has(rel.toLowerCase());
+function fixCase(root: string, expected: Set<string>): void {
+  const files = new Map<string, string>();
+  const dirs = new Map<string, string>();
+  for (const p of expected) {
+    files.set(p.toLowerCase(), p);
+    const segs = p.split("/");
+    for (let i = 1; i < segs.length; i++) {
+      const d = segs.slice(0, i).join("/");
+      dirs.set(d.toLowerCase(), d);
+    }
+  }
+  const walk = (relDir: string) => {
+    let entries;
+    try {
+      entries = readdirSync(relDir ? join(root, relDir) : root, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const rel = relDir ? `${relDir}/${e.name}` : e.name;
+      const want = (e.isDirectory() ? dirs : files).get(rel.toLowerCase());
+      let next = rel;
+      if (want !== undefined && want !== rel) {
+        renameSync(join(root, rel), join(root, want));
+        next = want;
+      }
+      if (e.isDirectory()) walk(next);
+    }
+  };
+  walk("");
+}
+
+/**
+ * Sweep a generator's cache down to exactly `expected` ("/"-relative paths),
+ * plus anything under a `protect` prefix (sources that failed this run keep
+ * their previous outputs) and the ownership marker. Fixes letter case first on
+ * a case-insensitive disk. Returns the number of files removed. Callers check
+ * canSweep() first.
+ */
+export function sweepExpected(root: string, expected: Set<string>, protect: string[] = []): number {
+  if (caseInsensitive(root)) fixCase(root, expected);
+  return sweepCache(
+    root,
+    (rel) => expected.has(rel) || rel.startsWith(".subfolio-cache-") || protect.some((pre) => rel.startsWith(pre)),
+  );
 }
 
 /**

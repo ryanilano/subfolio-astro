@@ -131,10 +131,19 @@ export function canSweep(kind: CacheKind, root: string = contentDir()): boolean 
  * There a case-only rename leaves the cached file under its old name.
  */
 export function caseInsensitive(dir: string): boolean {
-  const real = realish(dir);
-  const flipped = real.replace(/[a-z]/i, (c) => (c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase()));
-  if (flipped === real || !existsSync(real)) return false;
-  return existsSync(flipped);
+  // Probe inside `dir` itself: a case-sensitive volume can be mounted under a
+  // case-insensitive one (/Volumes on macOS), so the path's first letter
+  // proves nothing about the disk the cache sits on.
+  if (!existsSync(dir)) return false;
+  const probe = join(dir, ".subfolio-case-probe");
+  try {
+    writeFileSync(probe, "");
+    return existsSync(join(dir, ".SUBFOLIO-CASE-PROBE"));
+  } catch {
+    return false;
+  } finally {
+    rmSync(probe, { force: true });
+  }
 }
 
 /**

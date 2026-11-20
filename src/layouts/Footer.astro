@@ -84,13 +84,14 @@ const credit = siteConfig.site_footer_credit || "";
     padding-bottom: 0.75em;
   }
   /* Phones (the theme's small-and-down, max-width 639px): the credit starts
-     on its own line under the copyright, and its separator is hidden. */
+     on its own line under the copyright, and its leading separator is hidden
+     (separators later in the credit stay). */
   @media (max-width: 639px) {
     .footer__copyright--credit .footer__credit {
       display: block;
       margin-top: 0.25em;
     }
-    .footer__copyright--credit .footer__credit :global(.footer__sep) {
+    .footer__copyright--credit .footer__credit :global(.footer__sep:first-child) {
       display: none;
     }
   }

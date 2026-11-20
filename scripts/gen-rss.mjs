@@ -19,13 +19,16 @@
  * or unreachable feed never breaks the build.
  */
 import Parser from "rss-parser";
-import { readdirSync, statSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { createHash } from "node:crypto";
 import { parse as parseYaml } from "yaml";
+import { ContentTree } from "../src/lib/contentWalk.ts";
 
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 const cacheRoot = resolve(process.env.SUBFOLIO_RSS_CACHE ?? "./.rss-cache");
+// Shared publication policy (src/lib/contentWalk.ts).
+const tree = new ContentTree(contentRoot);
 
 const DEFAULT_COUNT = 10;
 const DEFAULT_CACHE_SECONDS = 3600;
@@ -53,23 +56,9 @@ function cacheFileFor(feedurl) {
 
 /** Recursively collect .rss files (prefixed or standalone) under contentRoot. */
 function walkRss(relDir, out) {
-  const absDir = join(contentRoot, relDir);
-  let names;
-  try {
-    names = readdirSync(absDir);
-  } catch {
-    return;
-  }
-  for (const name of names) {
-    const relPath = relDir ? `${relDir}/${name}` : name;
-    const abs = join(absDir, name);
-    let st;
-    try {
-      st = statSync(abs);
-    } catch {
-      continue;
-    }
-    if (st.isDirectory()) {
+  if (!tree.enterDir(relDir)) return;
+  for (const { name, relPath, isDir } of tree.list(relDir)) {
+    if (isDir) {
       walkRss(relPath, out);
     } else if (name.toLowerCase().endsWith(".rss")) {
       out.push(relPath);

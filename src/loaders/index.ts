@@ -1,5 +1,5 @@
 import type { Loader } from "astro/loaders";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import sharp from "sharp";
@@ -18,6 +18,7 @@ import { collectEmbeds, type EmbedInput, type Renderer } from "./embeds.ts";
 import { parseLink, parsePop, parseFeature, parseCut } from "./enhancers.ts";
 import { parseSubfolioYaml, asString } from "./yaml.ts";
 import { parseAccess } from "./access.ts";
+import { ContentTree } from "../lib/contentWalk.ts";
 import { folderEntrySchema, type ChildFile, type ChildFolder, type Feature, type Related } from "./schema.ts";
 
 /**
@@ -56,18 +57,18 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
       store.clear();
       const kinds = loadFileKinds(opts.filekindsPath);
       const ctx = { contentRoot, kinds, renderer: opts.renderer };
+      // One publication policy (src/lib/contentWalk.ts): dot names and -access
+      // are never walked, symlinks only count when they stay inside the root,
+      // and each real folder is entered once, so a link cycle cannot loop.
+      const tree = new ContentTree(contentRoot);
       let count = 0;
       // Captured for the post-walk async image-dimension enrichment pass.
       const entries: { id: string; data: ReturnType<typeof folderEntrySchema.parse> }[] = [];
 
       const walk = (relDir: string) => {
+        if (!tree.enterDir(relDir)) return;
         const absDir = join(contentRoot, relDir);
-        let dirents: string[];
-        try {
-          dirents = readdirSync(absDir);
-        } catch {
-          return;
-        }
+        const dirents = tree.list(relDir);
 
         const visibleFiles: ChildFile[] = [];
         const visibleFolders: ChildFolder[] = [];
@@ -77,18 +78,13 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
         const infoComments = new Map<string, string>();
         const infoAlts = new Map<string, string>();
         const excluded = new Set<string>();
-        let access = null as ReturnType<typeof parseAccess> | null;
+        // -access metadata (parsed, not enforced). The walk never lists it
+        // (it is unpublishable), so it is read here explicitly.
+        const accessRaw = tree.readMeta(relDir ? `${relDir}/-access` : "-access");
+        const access = accessRaw === null ? null : parseAccess(accessRaw);
         const subdirsToWalk: string[] = [];
 
-        for (const name of dirents.sort()) {
-          const relPath = relDir ? `${relDir}/${name}` : name;
-          const isDir = safeIsDir(join(absDir, name));
-
-          // -access metadata (parsed, not enforced).
-          if (name === "-access") {
-            access = parseAccess(readSafe(join(absDir, name)));
-            continue;
-          }
+        for (const { name, relPath, isDir } of dirents) {
 
           // Position embeds are hidden but collected for this folder.
           if (positionOf(name) && !isDir) {
@@ -124,8 +120,10 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
             continue;
           }
 
-          // Any other hidden item: recurse if it's a real subfolder (so nested
-          // listings still get pages), but keep it out of THIS listing.
+          // Any other hidden ("-") item: recurse if it's a real subfolder (so
+          // nested listings still get pages), but keep it out of THIS listing.
+          // Dot-prefixed names never get here: the tree drops them, so .git and
+          // friends get no pages at all.
           // Exception: build-managed thumbnail dirs are served as raw bytes via
           // the /directory route only — walking them would emit a pointless
           // listing page plus a detail page for every generated thumbnail.
@@ -138,7 +136,7 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
             const fEnh = folderEnhancerOf(name);
             const single = fEnh === "site" || fEnh === "oplx";
             let slideTarget: string | null = null;
-            if (fEnh === "slide") slideTarget = firstChild(join(absDir, name), relPath);
+            if (fEnh === "slide") slideTarget = firstChild(tree, relPath);
             visibleFolders.push({
               name,
               displayName: displayName(name),
@@ -180,7 +178,10 @@ export function subfolioLoader(opts: SubfolioLoaderOptions): Loader {
         const embeds = collectEmbeds(embedInputs, ctx);
         const self = folderEnhancerOf(relDir.split("/").pop() ?? "");
         // This folder's own sidecar (`<parent>/<name>.info`): optional page meta.
-        const selfInfo = relDir ? parseSubfolioYaml(readSafe(join(contentRoot, relDir + cfg.infoExtension))) : {};
+        // Read through the tree, so a sidecar that is a link out of the root
+        // (or into a dot folder) is ignored like any other escaping link.
+        const selfInfoPath = relDir ? tree.resolveFile(relDir + cfg.infoExtension) : null;
+        const selfInfo = selfInfoPath ? parseSubfolioYaml(readSafe(selfInfoPath)) : {};
         const pageTitle = asString(selfInfo.title) || undefined;
         const pageDescription = asString(selfInfo.description) || undefined;
         const pageImage = asString(selfInfo.image) || undefined;
@@ -270,27 +271,13 @@ function buildFile(name: string, relPath: string, contentRoot: string, kinds: Re
   return base;
 }
 
-/** First non-hidden child name (for .slide redirect target), "/"-relative. */
-function firstChild(absFolder: string, relFolder: string): string | null {
-  let entries: string[];
-  try {
-    entries = readdirSync(absFolder).sort();
-  } catch {
-    return null;
-  }
-  for (const e of entries) {
-    if (isHidden(e, cfg)) continue;
-    return `${relFolder}/${e}`;
+/** First non-hidden child (for .slide redirect target), "/"-relative. */
+function firstChild(tree: ContentTree, relFolder: string): string | null {
+  for (const e of tree.list(relFolder)) {
+    if (isHidden(e.name, cfg)) continue;
+    return e.relPath;
   }
   return null;
-}
-
-function safeIsDir(p: string): boolean {
-  try {
-    return statSync(p).isDirectory();
-  } catch {
-    return false;
-  }
 }
 
 function readSafe(p: string): string {

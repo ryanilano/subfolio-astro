@@ -15,8 +15,9 @@
  * deploy is the first line of defense; this filter is the engine-level one.
  */
 import type { APIRoute } from "astro";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, resolve, extname } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve, extname } from "node:path";
+import { ContentTree, hasUnpublishableSegment } from "../../lib/contentWalk.ts";
 import { imageStripMode } from "../../lib/site.ts";
 import { publishedBytes } from "../../lib/stripMetadata.ts";
 
@@ -69,78 +70,34 @@ function mimeFor(name: string): string {
 const stripMode = imageStripMode;
 
 /**
- * Names that must never be served, even when the content root is a live git
- * checkout:
+ * What may be served is decided by the shared publication policy in
+ * src/lib/contentWalk.ts, the same one the loader and gen-* scripts use:
  *
  * - Any dot-prefixed entry (.git, .github, .forgejo, .claude, .gitignore,
- *   .DS_Store, .env, …). Dot entries are repo/OS metadata, never Subfolio
- *   content — Subfolio's own hidden convention is the "-" prefix, and those
- *   ARE served on purpose (embeds, -thumbnails/, -t-* banner images).
- * - `-access` (and its .txt variant): its allow/deny rules leak user and group
- *   names, and enforcement is deferred to Phase 4. The PHP engine's htaccess
- *   blocked config/users and *.yml for the same reason.
+ *   .DS_Store, .env, …) is never served. Dot entries are repo/OS metadata,
+ *   never Subfolio content — Subfolio's own hidden convention is the "-"
+ *   prefix, and those ARE served on purpose (embeds, -thumbnails/, -t-* banner
+ *   images).
+ * - `-access` (and its .txt variant) is never served: its allow/deny rules leak
+ *   user and group names, and enforcement is deferred to Phase 4. The PHP
+ *   engine's htaccess blocked config/users and *.yml for the same reason.
+ * - A symlink is served only when its real path stays inside its root, so a
+ *   link to ~/.ssh or ../outside publishes nothing. Folders are entered once by
+ *   real identity, so a link cycle cannot loop the walk.
  *
- * Applied in walkFiles (nothing blocked becomes a static route) AND in GET
- * (astro dev serves arbitrary paths live, so the walk-time filter alone is
- * not enough there).
+ * Applied in getStaticPaths (nothing blocked becomes a static route) AND in GET
+ * (astro dev serves arbitrary paths live, so the walk-time filter alone is not
+ * enough there).
  */
-function isBlockedName(name: string): boolean {
-  return name.startsWith(".") || name === "-access" || name === "-access.txt";
-}
-
-function isBlockedPath(relPath: string): boolean {
-  return relPath.split("/").some(isBlockedName);
-}
-
-/** Recursively collect every real file under `root`, "/"-relative. */
-function walkFiles(root: string, relDir: string, out: string[]): void {
-  const absDir = join(root, relDir);
-  let entries: string[];
-  try {
-    entries = readdirSync(absDir);
-  } catch {
-    return;
-  }
-  for (const name of entries) {
-    if (isBlockedName(name)) continue; // repo/OS metadata + -access: never served
-    const relPath = relDir ? `${relDir}/${name}` : name;
-    const abs = join(absDir, name);
-    let isDir = false;
-    try {
-      isDir = statSync(abs).isDirectory();
-    } catch {
-      continue;
-    }
-    if (isDir) walkFiles(root, relPath, out);
-    else out.push(relPath);
-  }
-}
+const trees = [contentRoot, cacheRoot, oplxCacheRoot, embedCacheRoot].map((r) => new ContentTree(r));
 
 export function getStaticPaths() {
-  // Union of content files and pre-generated cache thumbnails. The cache may add
-  // -thumbnails/ paths the content tree doesn't have; dedupe in case both carry
-  // the same path (content wins at serve time below).
+  // Union of content files and the pre-generated caches (thumbnails, .oplx
+  // zips, embed WebPs). A cache may add paths the content tree doesn't have;
+  // dedupe in case two carry the same path (content wins at serve time below).
   const paths = new Set<string>();
-  const contentFiles: string[] = [];
-  walkFiles(contentRoot, "", contentFiles);
-  contentFiles.forEach((p) => paths.add(p));
-  const cacheFiles: string[] = [];
-  walkFiles(cacheRoot, "", cacheFiles);
-  cacheFiles.forEach((p) => paths.add(p));
-  const oplxFiles: string[] = [];
-  walkFiles(oplxCacheRoot, "", oplxFiles);
-  oplxFiles.forEach((p) => paths.add(p));
-  const embedFiles: string[] = [];
-  walkFiles(embedCacheRoot, "", embedFiles);
-  embedFiles.forEach((p) => paths.add(p));
+  for (const tree of trees) tree.walkFiles().forEach((p) => paths.add(p));
   return [...paths].map((relPath) => ({ params: { path: relPath } }));
-}
-
-/** Resolve a "/"-relative request path against a root, rejecting traversal. */
-function safeResolve(root: string, relPath: string): string | null {
-  const abs = resolve(root, relPath);
-  if (abs !== root && !abs.startsWith(root + "/")) return null;
-  return abs;
 }
 
 export const GET: APIRoute = ({ params }) => {
@@ -148,36 +105,24 @@ export const GET: APIRoute = ({ params }) => {
   // Blocked names 403 before any disk access — mirrors the htaccess [F] rules.
   // Matters in `astro dev`, where GET serves arbitrary live paths that never
   // went through getStaticPaths' filtered walk.
-  if (isBlockedPath(relPath)) {
+  if (hasUnpublishableSegment(relPath) || relPath.split("/").includes("..")) {
     return new Response("Forbidden", { status: 403 });
   }
-  // Serve from content first, then the out-of-tree thumbnail cache. Both are
-  // traversal-guarded; content wins if a path somehow exists in both.
-  const absContent = safeResolve(contentRoot, relPath);
-  const absCache = safeResolve(cacheRoot, relPath);
-  const absOplx = safeResolve(oplxCacheRoot, relPath);
-  const absEmbed = safeResolve(embedCacheRoot, relPath);
-  if (absContent === null && absCache === null && absOplx === null && absEmbed === null) {
-    return new Response("Forbidden", { status: 403 });
-  }
-  let body: Buffer;
-  try {
-    body = readFileSync(absContent as string);
-  } catch {
+  // Serve from content first, then the caches. resolveFile() rejects traversal
+  // and anything whose real path leaves its root (a symlink out of the tree);
+  // content wins if a path somehow exists in more than one.
+  let body: Buffer | null = null;
+  for (const tree of trees) {
+    const abs = tree.resolveFile(relPath);
+    if (abs === null) continue;
     try {
-      body = readFileSync(absCache as string);
+      body = readFileSync(abs);
+      break;
     } catch {
-      try {
-        body = readFileSync(absOplx as string);
-      } catch {
-        try {
-          body = readFileSync(absEmbed as string);
-        } catch {
-          return new Response("Not found", { status: 404 });
-        }
-      }
+      /* unreadable → try the next root */
     }
   }
+  if (body === null) return new Response("Not found", { status: 404 });
   body = publishedBytes(relPath, body, stripMode);
   // Copy into a fresh ArrayBuffer-backed view. node's Buffer is typed over
   // ArrayBufferLike (incl. SharedArrayBuffer), which astro check won't accept

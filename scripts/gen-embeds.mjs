@@ -32,9 +32,10 @@
  * whether InlineEmbeds renders a <picture> at all.
  */
 import sharp from "sharp";
-import { readdirSync, statSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { statSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { resolve, join, dirname } from "node:path";
 import { positionOf } from "../src/loaders/conventions.ts";
+import { ContentTree } from "../src/lib/contentWalk.ts";
 
 // --- Config -------------------------------------------------------------
 const WEBP_QUALITY = 90; // high bar: embeds are hero imagery (thumbs use 80)
@@ -51,26 +52,14 @@ const IMG_EXTS = new Set([".png", ".jpg", ".jpeg"]);
 
 const contentRoot = resolve(process.env.SUBFOLIO_CONTENT_DIR ?? "./content/examples");
 export const cacheRoot = resolve(process.env.SUBFOLIO_EMBED_CACHE ?? "./.embed-cache");
+// Shared publication policy (src/lib/contentWalk.ts).
+const tree = new ContentTree(contentRoot);
 
 /** Recursively collect position-prefixed embed images, "/"-relative to contentRoot. */
 function walkEmbeds(relDir, out) {
-  const absDir = join(contentRoot, relDir);
-  let names;
-  try {
-    names = readdirSync(absDir);
-  } catch {
-    return;
-  }
-  for (const name of names) {
-    const relPath = relDir ? `${relDir}/${name}` : name;
-    const abs = join(absDir, name);
-    let st;
-    try {
-      st = statSync(abs);
-    } catch {
-      continue;
-    }
-    if (st.isDirectory()) {
+  if (!tree.enterDir(relDir)) return;
+  for (const { name, relPath, isDir } of tree.list(relDir)) {
+    if (isDir) {
       walkEmbeds(relPath, out);
     } else {
       // Only position-prefixed raster embeds (not .gif, not already .webp).

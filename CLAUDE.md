@@ -45,7 +45,8 @@ Registered in [src/content.config.ts](src/content.config.ts) as collection `"fol
 - **Build-time, not runtime.** No server/DB. Deferred behaviors (sharp thumbnails, RSS fetch, Textile/Markdown render, `-access` enforcement) are captured as *parsed intent*, not executed.
 - **Same content, new stack.** Loader reads the same `directory/` layout as the PHP app, so both can run side-by-side for diffing.
 - **Lenient parsing.** One malformed user YAML won't break the build (matches old PHP).
-- **Hidden items still matter.** `-hidden`/`.`-prefixed or enhancer-extension files are hidden from listings but read explicitly for embeds, features, shortcuts.
+- **Hidden items still matter.** `-hidden` or enhancer-extension files are hidden from listings but read explicitly for embeds, features, shortcuts.
+- **One publication policy.** Every walk (loader, `/directory` route, `gen-*` scripts) goes through [src/lib/contentWalk.ts](src/lib/contentWalk.ts): dot-prefixed names and `-access` are never walked or published, a symlink counts only when its real path stays inside the content root, and a folder link back to itself or an ancestor is dropped so no walk can loop.
 
 ### Routing
 

@@ -12,7 +12,7 @@ Every "before" claim below describes one specific commit of a public repository:
 
 | | |
 |---|---|
-| Repo | `area17/subfolio` |
+| Repo | `area17/subfolio` (no longer on GitHub; public copy with the full history: `ryanilano/subfolio`) |
 | Commit | `ec8889e670d5da07159a2e5841e80f964248e610` |
 | Date | 2021-04-16 18:08:02 +0200 |
 | Subject | Fix issue with the Filebrowser : array_pop is expecting a variable |

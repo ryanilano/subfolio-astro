@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, realpathSync, utimesSync, renameSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import sharp from "sharp";
@@ -214,7 +214,9 @@ test("an explicit cache folder that already holds other files is never swept", (
   writeFileSync(join(foreign, "project", "main.c"), "x");
   for (const s of ["gen-thumbs.mjs", "gen-embeds.mjs", "gen-oplx.mjs"]) {
     const key = { "gen-thumbs.mjs": "SUBFOLIO_THUMB_CACHE", "gen-embeds.mjs": "SUBFOLIO_EMBED_CACHE", "gen-oplx.mjs": "SUBFOLIO_OPLX_CACHE" }[s];
-    run(s, { [key]: foreign });
+    const r = spawnSync(process.execPath, [join(ROOT, "scripts", s)], { cwd: ROOT, env: envFor({ [key]: foreign }), encoding: "utf8", timeout: 60_000 });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stderr, new RegExp(`${key}=.*will not be swept`), `${s} refused the folder without a warning`);
     assert.equal(readFileSync(join(foreign, "notes.txt"), "utf8"), "important", `${s} swept a foreign folder`);
     assert.ok(existsSync(join(foreign, "project", "main.c")), `${s} swept a foreign folder`);
   }
@@ -241,4 +243,14 @@ test("an empty content root (unmounted volume) sweeps nothing", () => {
   assert.ok(existsSync(zip));
   run("gen-oplx.mjs", { SUBFOLIO_CONTENT_DIR: empty });
   assert.ok(existsSync(zip), "cache swept against an empty content root");
+});
+
+test("a content root holding only dot entries (half-failed clone) sweeps nothing", () => {
+  const dotOnly = join(tmp, "dot-only");
+  mkdirSync(join(dotOnly, ".git"), { recursive: true });
+  const zip = join(caches, "oplx", "keep.oplx.zip");
+  assert.ok(existsSync(zip));
+  assert.equal(canSweep("oplx", dotOnly), false);
+  run("gen-oplx.mjs", { SUBFOLIO_CONTENT_DIR: dotOnly });
+  assert.ok(existsSync(zip), "cache swept against a root with only .git");
 });

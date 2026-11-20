@@ -94,7 +94,15 @@ export function claimCache(kind: CacheKind, root: string = contentDir()): boolea
   } catch {
     empty = true; // missing → ours to create
   }
-  if (explicit && !empty) return false;
+  if (explicit && !empty) {
+    // Refusing is right, but it must not be silent: a cache filled before the
+    // marker existed would otherwise keep publishing orphans with no sign.
+    console.warn(
+      `[cache] ${SETTINGS[kind].env}=${dir} holds files but no ${markerName(kind)} marker, so it will not be swept. ` +
+        `Empty it, or add the marker by hand (touch "${marker}") if only subfolio writes there.`,
+    );
+    return false;
+  }
   mkdirSync(dir, { recursive: true, mode: 0o755 });
   writeFileSync(marker, `subfolio ${kind} cache: a gen-* script may delete anything here that the content does not produce.\n`);
   return true;
@@ -102,14 +110,16 @@ export function claimCache(kind: CacheKind, root: string = contentDir()): boolea
 
 /**
  * May a gen-* script sweep this kind's cache? Only when the folder carries this
- * kind's ownership marker (claimCache), the content root exists and is not
- * empty (an unmounted volume would otherwise read as "everything deleted"), and
+ * kind's ownership marker (claimCache), the content root exists and holds
+ * at least one non-dot entry (an unmounted volume would otherwise read as "everything deleted"), and
  * the cache folder does not overlap the content root or another kind's cache.
  */
 export function canSweep(kind: CacheKind, root: string = contentDir()): boolean {
   if (!existsSync(root)) return false;
   try {
-    if (readdirSync(root).length === 0) return false;
+    // Dot entries never publish, so a root holding only .git (a half-failed
+    // clone) counts as empty too.
+    if (!readdirSync(root).some((n) => !n.startsWith("."))) return false;
   } catch {
     return false;
   }

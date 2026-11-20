@@ -40,6 +40,8 @@ The wrapper is needed because Astro only loads dotenv values at render time — 
 
 > **Why `.env.content` and not `.env`?** Astro auto-loads `.env` at render time only. With the content dir in `.env`, a plain `npm run build` produced a split-brain build: pages came from the fixture while the `/directory/` raw-bytes route walked the live content tree — leaking the content repo's `.git/` into `dist/` and permanently failing two smoke tests. Keeping the value in a file Astro never reads means every build is internally consistent: plain `npm` commands = pure fixture, `./dev-content.sh` = pure live content.
 
+**Build caches.** Thumbnails, embed variants and `.oplx` zips are cached per content root under `.thumb-cache/<key>/`, `.embed-cache/<key>/` and `.oplx-cache/<key>/`, and each `gen-*` run deletes cached files the content no longer produces. Files at the old top level of those folders are never read; delete them once with `rm -rf .thumb-cache .embed-cache .oplx-cache`. An explicit `SUBFOLIO_THUMB_CACHE` (or `_EMBED_`, `_OPLX_`) folder that already holds files is swept only once it carries a `.subfolio-cache-<kind>` marker; the scripts print a warning until then.
+
 **What never publishes.** Dot-prefixed files and folders (`.git`, `.env`, `.DS_Store`) and `-access` files are never read or published, and a symlink is followed only when its target stays inside the content root. This differs from the PHP engine in one way: a dot-prefixed enhancer file such as `.notes.ftr` or `.related.cut` is ignored without a warning. Rename it with a `-` prefix (`-notes.ftr`) to keep it hidden and working.
 
 ## Text rendering

@@ -65,4 +65,10 @@ const credit = siteConfig.site_footer_credit || "";
   .footer__credit :global(.footer__sep) {
     margin-right: 0.35em;
   }
+  /* With the copyright hidden (display_copyright: false) the credit comes
+     first in the row, so a leading separator in site_footer_credit would
+     dangle. Hide it; configs keep their separator markup unchanged. */
+  .footer__credit:first-child :global(.footer__sep:first-child) {
+    display: none;
+  }
 </style>

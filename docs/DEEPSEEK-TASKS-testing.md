@@ -56,7 +56,7 @@ eyeballs — so a headless worker can self-verify.
 **Read:** `src/components/listing/Listing.astro` (the 7-partial order: top embeds → features →
 gallery → middle embeds → files/folders → related → bottom embeds), `src/components/listing/InlineEmbeds.astro`.
 **Assert (verified anchors — confirm by grepping dist, add more):**
-- Root page (`page("")`) contains the top intro embed text and the `-b-footer.txt` bottom embed.
+- Root page (`page("")`) contains the top intro embed text, and the AGPL-3.0 credit in the footer (the root has no bottom embed).
 - `01_embedding_text_images` page has all three embed positions present — top text+image,
   middle text+image, bottom text+image. (Anchor: top text renders inside `id="inline_top_text"`;
   grep the page for the middle/bottom equivalents and the embedded `<img` tags.)

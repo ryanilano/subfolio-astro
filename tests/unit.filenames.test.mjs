@@ -37,6 +37,11 @@ before(() => {
   for (const [name, body] of Object.entries(FILES)) writeFileSync(join(content, name), body);
   writeFileSync(join(content, "50% folder", "inner #1.txt"), "CANARY_NESTED");
   out = join(tmp, "dist");
+  // A second astro build from the repo root: output and gen caches go to temp,
+  // but .astro/ and the content-layer store are shared with the project build.
+  // Safe only because the loader calls store.clear() on every load
+  // (src/loaders/index.ts); if that ever becomes incremental, give this build
+  // its own root.
   execFileSync(process.execPath, [join(ROOT, "node_modules/astro/bin/astro.mjs"), "build", "--outDir", out], {
     cwd: ROOT,
     env: {
@@ -110,7 +115,9 @@ test("listing links and sitemap encode each name exactly once", () => {
   const sitemap = readFileSync(join(out, "sitemap-0.xml"), "utf8");
   for (const name of Object.keys(FILES)) {
     const enc = encodeURIComponent(name);
-    assert.ok(html.includes(`href="/${enc}"`), `listing link for ${name} (expected /${enc})`);
+    // Names with %, # or ? link with a trailing slash (no host redirect needed).
+    const want = /[%#?]/.test(name) ? `/${enc}/` : `/${enc}`;
+    assert.ok(html.includes(`href="${want}"`), `listing link for ${name} (expected ${want})`);
     assert.ok(sitemap.includes(`/${enc}/</loc>`), `sitemap entry for ${name}`);
   }
 });

@@ -19,9 +19,11 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DIST, page } from "./_dist.mjs";
+import { cacheRoot } from "../src/lib/cachePaths.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const CACHE_ROOT = resolve(ROOT, ".thumb-cache");
+// Same folder gen-thumbs writes: .thumb-cache/<content-root key>/ (src/lib/cachePaths.ts).
+const CACHE_ROOT = cacheRoot("thumb", resolve(ROOT, process.env.SUBFOLIO_CONTENT_DIR ?? "content/examples"));
 
 // Known fixture image from content/examples/00_thumbnails/
 const CACHE_THUMB = join(CACHE_ROOT, "00_thumbnails/-thumbnails/example.png");

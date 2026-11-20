@@ -2,7 +2,7 @@
   "name": "subfolio-astro",
   "type": "module",
   "version": "0.1.0",
-  "description": "Subfolio reimagined as an Astro static site — a folder on disk becomes a themeable web gallery, no database, content authored by file-naming conventions.",
+  "description": "Subfolio reimagined as an Astro static site \u2014 a folder on disk becomes a themeable web gallery, no database, content authored by file-naming conventions.",
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "gen-thumbs": "node scripts/gen-thumbs.mjs",
@@ -28,7 +28,7 @@
     "@astrojs/sitemap": "^3.7.3",
     "astro": "^6.4.2",
     "rss-parser": "^3.13.0",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.5",
     "textile-js": "2.1.1",
     "yaml": "^2.6.1"
   },
@@ -48,5 +48,8 @@
   },
   "browserslist": [
     "defaults"
-  ]
+  ],
+  "overrides": {
+    "sharp": "$sharp"
+  }
 }

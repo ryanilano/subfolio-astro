@@ -1,6 +1,6 @@
 # Subfolio-Astro
 
-AstroJS port of [Subfolio](https://github.com/area17/subfolio) — a no-database file browser that turns a folder on disk into a themeable web gallery. The project has been reimagined from its original Kohana 2.x / PHP 5.6 stack to an **Astro static site** (Cloudflare Pages target, hybrid-ready). See it Live https://ryanilano.github.io/subfolio-astro/
+AstroJS port of [Subfolio](https://github.com/ryanilano/subfolio) — a no-database file browser that turns a folder on disk into a themeable web gallery. The project has been reimagined from its original Kohana 2.x / PHP 5.6 stack to an **Astro static site** (Cloudflare Pages target, hybrid-ready). See it Live https://ryanilano.github.io/subfolio-astro/
 
 ## Docs
 
@@ -82,13 +82,15 @@ its image data is scrubbed and published. Details: [SPEC-config §2b](docs/spec/
 
 ## Upstream reference
 
-This port is based on [`area17/subfolio`](https://github.com/area17/subfolio) at commit [`ec8889e`](https://github.com/area17/subfolio/commit/ec8889e670d5da07159a2e5841e80f964248e610) (16 April 2021), which is the current `master` HEAD and the last commit the project received.
+This port is based on Subfolio as published at `area17/subfolio`, commit [`ec8889e`](https://github.com/ryanilano/subfolio/commit/ec8889e670d5da07159a2e5841e80f964248e610) (16 April 2021), the last commit the upstream project received.
+
+AREA17's repository is no longer on GitHub. [`ryanilano/subfolio`](https://github.com/ryanilano/subfolio) is a public copy that keeps the full upstream history, so the links here point to it. Its `master` has later commits; the pinned commit above is in its history.
 
 Every claim this repository and its [docs](https://ryanilano.github.io/subfolio-astro-docs/) make about the original — file paths, line references, config values, behaviour — refers to that commit. Pinning it means those claims stay checkable even if upstream changes.
 
 ## License
 
-Subfolio-Astro is a modified derivative — an Astro port — of [Subfolio](https://github.com/area17/subfolio) by [AREA17](https://area17.com), and is distributed under the **same** license: the [GNU Affero General Public License v3.0](LICENSE) (`AGPL-3.0-or-later`).
+Subfolio-Astro is a modified derivative — an Astro port — of [Subfolio](https://github.com/ryanilano/subfolio) by [AREA17](https://area17.com), and is distributed under the **same** license: the [GNU Affero General Public License v3.0](LICENSE) (`AGPL-3.0-or-later`).
 
 - Original Subfolio © AREA17.
 - Astro port © 2026 Ryan Ilano.

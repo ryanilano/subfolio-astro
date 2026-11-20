@@ -18,6 +18,7 @@ import type { APIRoute } from "astro";
 import { readFileSync } from "node:fs";
 import { resolve, extname } from "node:path";
 import { ContentTree, hasUnpublishableSegment } from "../../lib/contentWalk.ts";
+import { routeKey } from "../../lib/routeParam.ts";
 import { imageStripMode } from "../../lib/site.ts";
 import { publishedBytes } from "../../lib/stripMetadata.ts";
 
@@ -85,9 +86,9 @@ const stripMode = imageStripMode;
  *   link to ~/.ssh or ../outside publishes nothing. Folders are entered once by
  *   real identity, so a link cycle cannot loop the walk.
  *
- * Applied in getStaticPaths (nothing blocked becomes a static route) AND in GET
- * (astro dev serves arbitrary paths live, so the walk-time filter alone is not
- * enough there).
+ * Applied in getStaticPaths (nothing blocked becomes a static route, so a
+ * blocked path 404s in dev and build alike) AND again in GET, which refuses a
+ * blocked or uncontained path even if one ever reaches it.
  */
 const trees = [contentRoot, cacheRoot, oplxCacheRoot, embedCacheRoot].map((r) => new ContentTree(r));
 
@@ -97,11 +98,18 @@ export function getStaticPaths() {
   // dedupe in case two carry the same path (content wins at serve time below).
   const paths = new Set<string>();
   for (const tree of trees) tree.walkFiles().forEach((p) => paths.add(p));
-  return [...paths].map((relPath) => ({ params: { path: relPath } }));
+  // The real path travels in props; the param is only a routable key
+  // (src/lib/routeParam.ts explains why "%", "#" and "?" can't be params).
+  return [...paths].map((relPath) => ({
+    params: { path: routeKey(relPath, import.meta.env.DEV) },
+    props: { relPath },
+  }));
 }
 
-export const GET: APIRoute = ({ params }) => {
-  const relPath = params.path ?? "";
+export const GET: APIRoute = ({ params, props }) => {
+  // The real path from getStaticPaths props, in build and dev alike (a path not
+  // in getStaticPaths 404s before GET runs). params is only a fallback.
+  const relPath = typeof props.relPath === "string" ? props.relPath : (params.path ?? "");
   // Blocked names 403 before any disk access — mirrors the htaccess [F] rules.
   // Matters in `astro dev`, where GET serves arbitrary live paths that never
   // went through getStaticPaths' filtered walk.

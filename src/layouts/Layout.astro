@@ -11,6 +11,7 @@
  * <style> block (same approach as template_colors.php), overriding the
  * SCSS defaults.
  */
+import { withRealNames } from "../lib/routeParam.ts";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { ClientRouter } from "astro:transitions";
@@ -103,7 +104,9 @@ const base = import.meta.env.BASE_URL;
 
 // --- Open Graph / Twitter Card -------------------------------------------
 // Absolute canonical URL for this page (Astro.site is set in astro.config).
-const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
+// Astro.url carries the route param; withRealNames() maps routing stand-ins
+// for "%", "#" and "?" back to the real name (src/lib/routeParam.ts).
+const canonicalUrl = withRealNames(new URL(Astro.url.pathname, Astro.site).href);
 // Opt out of indexing for non-public deploys (e.g. archive.ilano.fyi). Set at
 // build time via SUBFOLIO_NOINDEX=1; default (demo) build stays indexable.
 // process.env (not import.meta.env) — matches how every other SUBFOLIO_* var is

@@ -102,14 +102,16 @@ export function claimCache(kind: CacheKind, root: string = contentDir()): boolea
 
 /**
  * May a gen-* script sweep this kind's cache? Only when the folder carries this
- * kind's ownership marker (claimCache), the content root exists and is not
- * empty (an unmounted volume would otherwise read as "everything deleted"), and
+ * kind's ownership marker (claimCache), the content root exists and holds
+ * at least one non-dot entry (an unmounted volume would otherwise read as "everything deleted"), and
  * the cache folder does not overlap the content root or another kind's cache.
  */
 export function canSweep(kind: CacheKind, root: string = contentDir()): boolean {
   if (!existsSync(root)) return false;
   try {
-    if (readdirSync(root).length === 0) return false;
+    // Dot entries never publish, so a root holding only .git (a half-failed
+    // clone) counts as empty too.
+    if (!readdirSync(root).some((n) => !n.startsWith("."))) return false;
   } catch {
     return false;
   }

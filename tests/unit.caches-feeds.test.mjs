@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, realpathSync, utimesSync, renameSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import sharp from "sharp";
@@ -43,6 +43,14 @@ const run = (script, over) =>
     encoding: "utf8",
     timeout: 60_000,
   });
+// Like run(), but returns stderr so a test can check what a script warned about.
+const runStderr = (script, over) => {
+  const r = spawnSync(process.execPath, [join(ROOT, "scripts", script)], { cwd: ROOT, env: envFor(over), encoding: "utf8", timeout: 60_000 });
+  assert.ifError(r.error); // a spawn failure or timeout names its cause
+  assert.equal(r.status, 0, `${script} signal=${r.signal}\n${r.stderr}`);
+  return r.stderr;
+};
+const refuseWarning = (script) => new RegExp(`\\[${script.replace(/\.mjs$/, "")}\\].*already holds files.*not swept`);
 const solid = (width, height) =>
   sharp({ create: { width, height, channels: 3, background: "#369" } }).png().toBuffer();
 
@@ -214,11 +222,23 @@ test("an explicit cache folder that already holds other files is never swept", (
   writeFileSync(join(foreign, "project", "main.c"), "x");
   for (const s of ["gen-thumbs.mjs", "gen-embeds.mjs", "gen-oplx.mjs"]) {
     const key = { "gen-thumbs.mjs": "SUBFOLIO_THUMB_CACHE", "gen-embeds.mjs": "SUBFOLIO_EMBED_CACHE", "gen-oplx.mjs": "SUBFOLIO_OPLX_CACHE" }[s];
-    run(s, { [key]: foreign });
+    // Refusing is right, but it must not be silent: each script warns on stderr.
+    assert.match(runStderr(s, { [key]: foreign }), refuseWarning(s), `${s} refused the folder without a warning`);
     assert.equal(readFileSync(join(foreign, "notes.txt"), "utf8"), "important", `${s} swept a foreign folder`);
     assert.ok(existsSync(join(foreign, "project", "main.c")), `${s} swept a foreign folder`);
   }
   assert.ok(!readdirSync(foreign).some((n) => n.startsWith(".subfolio-cache-")), "foreign folder was claimed");
+});
+
+test("a fresh or already-claimed cache folder runs without the refuse warning", () => {
+  // The other direction: if claimCache always refused, the cache would never be swept
+  // and every build would print a false alarm, and run() would not notice (it ignores stderr).
+  for (const s of ["gen-thumbs.mjs", "gen-embeds.mjs", "gen-oplx.mjs"]) {
+    const key = { "gen-thumbs.mjs": "SUBFOLIO_THUMB_CACHE", "gen-embeds.mjs": "SUBFOLIO_EMBED_CACHE", "gen-oplx.mjs": "SUBFOLIO_OPLX_CACHE" }[s];
+    const dir = join(tmp, `quiet-${s}`); // does not exist yet: the first run claims it
+    assert.doesNotMatch(runStderr(s, { [key]: dir }), /already holds files/, `${s} warned on a fresh folder`);
+    assert.doesNotMatch(runStderr(s, { [key]: dir }), /already holds files/, `${s} warned on its own claimed folder`);
+  }
 });
 
 test("a source that fails to decode keeps its previous outputs", () => {

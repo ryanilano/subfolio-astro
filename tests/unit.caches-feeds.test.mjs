@@ -217,9 +217,9 @@ test("an explicit cache folder that already holds other files is never swept", (
     // Refusing is right, but it must not be silent: each script warns on stderr.
     const r = spawnSync(process.execPath, [join(ROOT, "scripts", s)], { cwd: ROOT, env: envFor({ [key]: foreign }), encoding: "utf8", timeout: 60_000 });
     assert.ifError(r.error); // a spawn failure or timeout names its cause
-    assert.equal(r.status, 0, r.stderr);
+    assert.equal(r.status, 0, `signal=${r.signal}\n${r.stderr}`);
     const name = s.replace(/\.mjs$/, "");
-    assert.match(r.stderr, new RegExp(`\\[${name}\\].*not swept`), `${s} refused the folder without a warning`);
+    assert.match(r.stderr, new RegExp(`\\[${name}\\].*already holds files.*not swept`), `${s} refused the folder without a warning`);
     assert.equal(readFileSync(join(foreign, "notes.txt"), "utf8"), "important", `${s} swept a foreign folder`);
     assert.ok(existsSync(join(foreign, "project", "main.c")), `${s} swept a foreign folder`);
   }

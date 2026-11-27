@@ -200,25 +200,57 @@ const HTML5_BLOCK_START = new RegExp(
  * notextile. -1 if it never closes; that block is left as it was, and parse5
  * tidies it later. `<section />` counts as an opener, as browsers parse it.
  * Also -1 when a `<pre>`, `<code>` or `<notextile>` inside opens and never
- * closes: wrapped in `<notextile>`, that open tag makes textile-js drop
- * everything after the wrapper, so the block is left as it was instead.
+ * closes before this block does: wrapped in `<notextile>`, that open tag makes
+ * textile-js drop everything after the wrapper, so the block is left as it was.
  */
 function matchingCloseEnd(source: string, tag: string, from: number): number {
-  // LITERAL_HTML is tried first, so the `open` alternative only matches a
-  // pre/code/notextile opener that LITERAL_HTML could not close.
+  // Like LITERAL_HTML, but a pre/code/notextile only closes with its own name
+  // (`<pre>a</code>` is not closed). It is tried first, so the `open`
+  // alternative only matches an opener it could not close.
+  const literal = "<!--[\\s\\S]*?-->|<(?<lit>pre|code|notextile)(?=[\\s>])[^>]*>[\\s\\S]*?<\\/\\k<lit>\\s*>";
   const tags = new RegExp(
-    `${LITERAL_HTML}|<(?<open>pre|code|notextile)(?=[\\s>])|<(?<close>\\/?)${tag}(?=[\\s/>])[^>]*>`,
+    `${literal}|<(?<open>pre|code|notextile)(?=[\\s>])|<(?<close>\\/?)${tag}(?=[\\s/>])[^>]*>`,
     "gi",
   );
+  // A pre/code/notextile "closed" only by a closer past this block's own close
+  // tag (a later section's </pre>) is really unclosed here.
+  const closeTag = new RegExp(`<\\/${tag}(?=[\\s>])`, "i");
   tags.lastIndex = from;
   let depth = 0;
   for (let m = tags.exec(source); m; m = tags.exec(source)) {
     if (m.groups?.open) return -1; // an unclosed pre/code/notextile: leave the block as it was
+    if (m.groups?.lit && closeTag.test(m[0])) return -1; // it only closes past our own close tag
     if (m.groups?.close === undefined) continue; // a closed literal region
     depth += m.groups.close ? -1 : 1;
     if (depth === 0) return m.index + m[0].length;
   }
   return -1;
+}
+
+/** Plain lowercase text textile-js leaves alone: the paragraph `wrapsCleanly` looks for. */
+const SENTINEL = "zqxwrapsentinel";
+
+/** How often "notextile" appears in a string, any case. More in the output than in the input means a wrapper leaked. */
+const countNotextile = (s: string): number => s.match(/notextile/gi)?.length ?? 0;
+
+/**
+ * True when textile-js takes `<notextile>block</notextile>` as one block and
+ * still renders the paragraph after it. textile-js reads a `<notextile>` block
+ * until every tag opened inside it is closed (its void-tag list is short), so
+ * an open `<p>`, `<li>`, `<span>` or `<figcaption>`, a `<source>`, or a
+ * self-closed `<code/>` makes it swallow the rest of the file. textile-js
+ * itself is the judge here, so every such case is caught, not only the ones
+ * listed. It also fails when the wrapper itself shows up as text. A block that
+ * fails, or that holds a `<notextile>` tag of its own, is left as it was.
+ */
+function wrapsCleanly(block: string): boolean {
+  if (/<\/?notextile/i.test(block)) return false;
+  try {
+    const html: string = textile(`<notextile>${block}</notextile>\n\n${SENTINEL}`);
+    return html.trimEnd().endsWith(`<p>${SENTINEL}</p>`) && countNotextile(html) <= countNotextile(block);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -239,7 +271,7 @@ function passHtml5Blocks(source: string): string {
     // m.index is the start of the line: textile-js only sees <notextile> there,
     // so any indent goes inside the wrapper.
     const end = matchingCloseEnd(source, tag, m.index + m[0].indexOf("<"));
-    if (end < 0) continue;
+    if (end < 0 || !wrapsCleanly(source.slice(m.index, end))) continue;
     // textile-js only takes a block <notextile> when nothing follows it on the
     // line; anything that does ("</section> <!-- end -->") starts a new line.
     const tail = /^[ \t]*(?:\r?\n|$)/.test(source.slice(end)) ? "" : "\n";
@@ -368,6 +400,15 @@ function renderTextile(raw: string): string {
   let html: string;
   try {
     html = textile(passHtml5Blocks(text));
+    // A wrapper textile-js didn't take as a block (one that landed inside a
+    // bc.. or <pre> block, say) shows up in the page as text. Compared with a
+    // render without the wrappers, so the word in the author's own text
+    // doesn't count: if the wrappers added any, render without them, as
+    // before the HTML5 fix.
+    if (countNotextile(html) > 0) {
+      const plain: string = textile(text);
+      if (countNotextile(html) > countNotextile(plain)) html = plain;
+    }
   } catch (err) {
     // Lenient like the rest of the loader: one bad file must not fail the build.
     // Loud, never silent: say which text fell back.

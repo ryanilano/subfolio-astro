@@ -244,6 +244,60 @@ test("an unclosed <pre>, <code> or <notextile> inside an HTML5 block never drops
   }
 });
 
+test("an unclosed <pre> or <code> is not closed by a later section's closer", () => {
+  // The later section's </pre> must not pair with the first section's open
+  // <pre>, or the first </section> is skipped and the text between is dropped.
+  for (const [open, close] of [["<pre>", "</pre>"], ["<code>", "</code>"]]) {
+    const html = tx(
+      `<section>\n\n${open}a\n\n</section>\n\nMiddle *m*\n\n<section>\n\n${open}b${close}\n\n</section>\n\nAfter *b*`,
+    );
+    assert.match(html, /Middle/, `${open}: text between the sections is kept`);
+    assert.match(html, /After/, `${open}: text after the sections is kept`);
+  }
+});
+
+test("a <pre> closed by the wrong closer never leaks the wrapper as text", () => {
+  const html = tx("<section>\n\n<pre>a</code>\n\n</section>\n\nAfter");
+  assert.doesNotMatch(html, /notextile/);
+  assert.match(html, /After/);
+});
+
+test("a block textile-js can't pass through whole is left as it was, so the text after it survives", () => {
+  // textile-js reads a <notextile> block until every tag inside is closed:
+  // left-off end tags, void tags it doesn't know and a self-closed <code/>
+  // would make it drop the rest of the file.
+  for (const src of [
+    "<section>\n<p>One\n<p>Two\n</section>\n\nAfter text",
+    'Intro\n\n<figure>\n<img src="a.jpg">\n<figcaption>Cap\n</figure>\n\nAfter text',
+    '<figure>\n<picture><source srcset="a.webp" type="image/webp"><img src="a.jpg"></picture>\n</figure>\n\nAfter text',
+    "<section><span>open</section>\n\nAfter text",
+    "<section><code/>x</section>\n\nAfter text",
+    "<section><code>a</CODE></section>\n\nAfter text",
+  ]) {
+    assert.match(tx(src), /After text/, JSON.stringify(src));
+  }
+});
+
+test("a wrapper that lands inside a code block is never shown as text", () => {
+  for (const src of [
+    "bc.. code\n\nP. S. still code\n\n<section>inside</section>\n\np. end",
+    "<!-- c -->\nbc.. code\n\n<section>inside</section>\n\np. end",
+    "<pre>\n<code>x</code>\n\n<section>y</section>\n</pre>\n\nAfter text",
+  ]) {
+    assert.doesNotMatch(tx(src), /notextile/, JSON.stringify(src));
+  }
+});
+
+test('the word "notextile" in the text doesn\'t switch off the wrapper checks', () => {
+  // A leaked wrapper is still caught when the author's prose mentions the word.
+  const leak = tx("bc.. code\n\nP. S. still code\n\n<section>inside</section>\n\np. Textile has notextile blocks too.");
+  assert.equal(leak.match(/notextile/gi)?.length, 1, leak);
+  // A block that mentions the word still passes through as an element.
+  const block = tx("<section>\n\n<p>About notextile</p>\n\n</section>\n\nAfter text");
+  assert.match(block, /^<section>/);
+  assert.match(block, /After text/);
+});
+
 test("HTML5 blocks in CRLF text pass through too", () => {
   assert.equal(
     tx('h2. Intro\r\n\r\n<header class="x">\r\n\r\n<div>a</div>\r\n\r\n</header>\r\n\r\nAfter'),

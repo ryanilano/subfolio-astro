@@ -199,13 +199,22 @@ const HTML5_BLOCK_START = new RegExp(
  * counting nested tags of the same name, outside comments, pre, code and
  * notextile. -1 if it never closes; that block is left as it was, and parse5
  * tidies it later. `<section />` counts as an opener, as browsers parse it.
+ * Also -1 when a `<pre>`, `<code>` or `<notextile>` inside opens and never
+ * closes: wrapped in `<notextile>`, that open tag makes textile-js drop
+ * everything after the wrapper, so the block is left as it was instead.
  */
 function matchingCloseEnd(source: string, tag: string, from: number): number {
-  const tags = new RegExp(`${LITERAL_HTML}|<(?<close>\\/?)${tag}(?=[\\s/>])[^>]*>`, "gi");
+  // LITERAL_HTML is tried first, so the `open` alternative only matches a
+  // pre/code/notextile opener that LITERAL_HTML could not close.
+  const tags = new RegExp(
+    `${LITERAL_HTML}|<(?<open>pre|code|notextile)(?=[\\s>])|<(?<close>\\/?)${tag}(?=[\\s/>])[^>]*>`,
+    "gi",
+  );
   tags.lastIndex = from;
   let depth = 0;
   for (let m = tags.exec(source); m; m = tags.exec(source)) {
-    if (m.groups?.close === undefined) continue; // a literal region
+    if (m.groups?.open) return -1; // an unclosed pre/code/notextile: leave the block as it was
+    if (m.groups?.close === undefined) continue; // a closed literal region
     depth += m.groups.close ? -1 : 1;
     if (depth === 0) return m.index + m[0].length;
   }

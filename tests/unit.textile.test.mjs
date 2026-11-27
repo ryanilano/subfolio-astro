@@ -234,6 +234,16 @@ test("an HTML5 block that never closes, or sits inside <pre>, is left as it was"
   assert.equal(tx("<pre>\n\n<header>keep</header>\n\n</pre>"), "<pre>\n&#x3C;header>keep&#x3C;/header>\n\n</pre>");
 });
 
+test("an unclosed <pre>, <code> or <notextile> inside an HTML5 block never drops the text after it", () => {
+  // Wrapped in <notextile>, the open tag would make textile-js swallow the rest
+  // of the file, so the block is left as it was and every word survives.
+  for (const open of ["<pre>", "<code>", "<notextile>"]) {
+    const html = tx(`<section>\n\n${open}unclosed\n\n</section>\n\nAfter *b*\n\nh2. Kept`);
+    assert.match(html, /After/, `${open}: text after the block is kept`);
+    assert.match(html, /Kept/, `${open}: the heading after the block is kept`);
+  }
+});
+
 test("HTML5 blocks in CRLF text pass through too", () => {
   assert.equal(
     tx('h2. Intro\r\n\r\n<header class="x">\r\n\r\n<div>a</div>\r\n\r\n</header>\r\n\r\nAfter'),

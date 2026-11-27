@@ -271,7 +271,12 @@ function passHtml5Blocks(source: string): string {
     // m.index is the start of the line: textile-js only sees <notextile> there,
     // so any indent goes inside the wrapper.
     const end = matchingCloseEnd(source, tag, m.index + m[0].indexOf("<"));
-    if (end < 0 || !wrapsCleanly(source.slice(m.index, end))) continue;
+    if (end < 0) continue;
+    const block = source.slice(m.index, end);
+    // A block on one line already renders as HTML on main, with Textile inside
+    // it (*bold*, links, curly quotes), so it is left to textile-js. Only a
+    // block that spans lines is escaped and split, and needs the wrapper.
+    if (!/[\r\n]/.test(block) || !wrapsCleanly(block)) continue;
     // textile-js only takes a block <notextile> when nothing follows it on the
     // line; anything that does ("</section> <!-- end -->") starts a new line.
     const tail = /^[ \t]*(?:\r?\n|$)/.test(source.slice(end)) ? "" : "\n";

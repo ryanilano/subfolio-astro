@@ -204,9 +204,19 @@ test("a top-level <header> with nested <div>s passes through, not escaped or spl
   assert.equal(tx(src), src, "the block comes out exactly as written");
 });
 
-test("a <figure> with a <figcaption> passes through", () => {
-  const src = '<figure><img src="a.jpg" alt="A"><figcaption>Cap - tion</figcaption></figure>';
+test("a <figure> with a <figcaption> across lines passes through as written", () => {
+  const src = '<figure>\n<img src="a.jpg" alt="A">\n<figcaption>Cap - tion, *raw* "quotes" ...</figcaption>\n</figure>';
   assert.equal(tx(src), src);
+});
+
+test("a one-line HTML5 block keeps Textile inside, as on main", () => {
+  // One line isn't escaped or split by textile-js, so it isn't wrapped:
+  // phrase markup, links and all the typography still apply inside it.
+  const html = tx('<figure><img src="a.jpg" alt="A"><figcaption>*Bold* "link":/about 3 X 4 -- "size" ...</figcaption></figure>');
+  assert.match(html, /<figure><img src="a.jpg" alt="A"><figcaption>/);
+  assert.match(html, /<strong>Bold<\/strong>/);
+  assert.match(html, /<a href="\/about"[^>]*>link<\/a>/);
+  assert.match(html, /3 × 4 — “size” …/);
 });
 
 test("Textile around HTML5 blocks still renders", () => {

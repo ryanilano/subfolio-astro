@@ -234,6 +234,37 @@ test("an HTML5 block that never closes, or sits inside <pre>, is left as it was"
   assert.equal(tx("<pre>\n\n<header>keep</header>\n\n</pre>"), "<pre>\n&#x3C;header>keep&#x3C;/header>\n\n</pre>");
 });
 
+test("HTML5 blocks in CRLF text pass through too", () => {
+  assert.equal(
+    tx('h2. Intro\r\n\r\n<header class="x">\r\n\r\n<div>a</div>\r\n\r\n</header>\r\n\r\nAfter'),
+    '<h2>Intro</h2>\n<header class="x">\n\n<div>a</div>\n\n</header>\n<p>After</p>',
+  );
+});
+
+test("an HTML5 tag inside an extended bc.. or pre.. block stays literal code", () => {
+  assert.equal(
+    tx("bc.. <div>\n\n<header>Title</header>\n\np. done"),
+    "<pre><code>&#x3C;div>\n\n&#x3C;header>Title&#x3C;/header></code></pre>\n<p>done</p>",
+  );
+  assert.equal(
+    tx("pre.. a\n\n<section>x</section>\n\nh2. After"),
+    "<pre>a\n\n&#x3C;section>x&#x3C;/section></pre>\n<h2>After</h2>",
+  );
+});
+
+test("text after an HTML5 block's close tag, on the same line, never leaks the wrapper", () => {
+  assert.equal(
+    tx("<section>\n\ntext\n\n</section> <!-- end intro -->"),
+    "<section>\n\ntext\n\n</section>\n<!-- end intro -->",
+  );
+  assert.equal(tx("<section>\n\na\n\n</section> and *more*"), "<section>\n\na\n\n</section>\n<p>and <strong>more</strong></p>");
+});
+
+test("a same-name tag inside <pre> doesn't throw off the close-tag match", () => {
+  const html = tx("<section>\n\n<pre>&lt;section&gt; example</pre>\n\n</section>\n\nAfter");
+  assert.equal(html, "<section>\n\n<pre>&#x3C;section> example</pre>\n\n</section>\n<p>After</p>");
+});
+
 // --- Unknown syntax renders as text, never dropped ---------------------------
 
 test("unknown block modifiers stay literal text", () => {

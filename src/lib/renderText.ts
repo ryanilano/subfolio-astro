@@ -168,32 +168,45 @@ function setAside(source: string): { text: string; pieces: Piece[] } {
  */
 const HTML5_BLOCKS = ["article", "aside", "figcaption", "figure", "footer", "header", "hgroup", "main", "nav", "section"];
 
+/** Textile's block signatures and attribute modifiers (textile-js re_ext.js). */
+const TX_BLOCKS = "(?:b[qc]|div|notextile|pre|h[1-6]|fn\\d+|p|###)";
+const TX_ATTR = "(?:\\([^)]+\\)|\\{[^}]+\\}|\\[[^[\\]]+\\]|<>|<|>|=|[()]+)*";
+
+/** Start of a Textile block: start of the text, or after a blank line (LF or CRLF). */
+const AT_BLOCK = "(?<=^|\\r?\\n[ \\t]*\\r?\\n)";
+
+/** Literal regions an HTML5 tag inside must not be counted in: comments, pre, code, notextile. */
+const LITERAL_HTML = "<!--[\\s\\S]*?-->|<(?:pre|code|notextile)(?=[\\s>])[^>]*>[\\s\\S]*?<\\/(?:pre|code|notextile)\\s*>";
+
 /**
- * One scan of the source. In order of the alternatives: an HTML comment, or a
- * `<pre>` / `<code>` / `<notextile>` element (skipped whole, so a tag inside them
- * is left alone), or an HTML5 block opening tag at the start of a Textile block
- * (start of the text or after a blank line, leading spaces allowed). An HTML5
- * tag in the middle of a paragraph is not a block and is left to textile-js.
+ * One scan of the source. In order of the alternatives, each skipped whole so a
+ * tag inside is left alone: an HTML comment or a `<pre>` / `<code>` /
+ * `<notextile>` element; an extended Textile block (`bc..`, `pre..`, `bq..`
+ * and the rest), which runs across blank lines to the next block signature.
+ * Last, the one we act on: an HTML5 block opening tag at the start of a Textile
+ * block, leading spaces allowed. An HTML5 tag in the middle of a paragraph is
+ * not a block and is left to textile-js.
  */
 const HTML5_BLOCK_START = new RegExp(
-  "<!--[\\s\\S]*?-->" +
-    "|<(pre|code|notextile)(?=[\\s>])[^>]*>[\\s\\S]*?<\\/\\1\\s*>" +
-    `|(?<=^|\\n[ \\t]*\\n)[ \\t]*<(${HTML5_BLOCKS.join("|")})(?=[\\s/>])[^>]*>`,
+  LITERAL_HTML +
+    `|${AT_BLOCK}${TX_BLOCKS}${TX_ATTR}\\.\\.(?:\\s|(?=:))[\\s\\S]*?(?=\\r?\\n+${TX_BLOCKS}${TX_ATTR}\\.|$)` +
+    `|${AT_BLOCK}[ \\t]*<(?<tag>${HTML5_BLOCKS.join("|")})(?=[\\s/>])[^>]*>`,
   "gi",
 );
 
 /**
  * Where the element opened at `from` closes: the end of its matching close tag,
- * counting nested tags of the same name and skipping comments. -1 if it never
- * closes; that block is left as it was, and parse5 tidies it later.
+ * counting nested tags of the same name, outside comments, pre, code and
+ * notextile. -1 if it never closes; that block is left as it was, and parse5
+ * tidies it later. `<section />` counts as an opener, as browsers parse it.
  */
 function matchingCloseEnd(source: string, tag: string, from: number): number {
-  const tags = new RegExp(`<!--[\\s\\S]*?-->|<(\\/?)${tag}(?=[\\s/>])[^>]*>`, "gi");
+  const tags = new RegExp(`${LITERAL_HTML}|<(?<close>\\/?)${tag}(?=[\\s/>])[^>]*>`, "gi");
   tags.lastIndex = from;
   let depth = 0;
   for (let m = tags.exec(source); m; m = tags.exec(source)) {
-    if (m[0].startsWith("<!--")) continue;
-    depth += m[1] ? -1 : 1;
+    if (m.groups?.close === undefined) continue; // a literal region
+    depth += m.groups.close ? -1 : 1;
     if (depth === 0) return m.index + m[0].length;
   }
   return -1;
@@ -201,22 +214,27 @@ function matchingCloseEnd(source: string, tag: string, from: number): number {
 
 /**
  * Wrap each top-level HTML5 block in `<notextile>` so textile-js passes it
- * through as written, the way it already passes `<div>`. Renaming the tags to
- * `div` instead would not work: a `<div>` nested inside then closes the
- * renamed outer block early in textile-js's phrase pass.
+ * through as written. Textile markup inside the block is not applied, which
+ * matches how the PHP engine's archive pages show these blocks. Renaming the
+ * tags to `div` instead (textile-js does parse Textile inside a `<div>`) would
+ * not work: a `<div>` nested inside then closes the renamed outer block early
+ * in textile-js's phrase pass.
  */
 function passHtml5Blocks(source: string): string {
   let out = "";
   let last = 0;
   HTML5_BLOCK_START.lastIndex = 0;
   for (let m = HTML5_BLOCK_START.exec(source); m; m = HTML5_BLOCK_START.exec(source)) {
-    const tag = m[2];
-    if (!tag) continue; // a comment or a pre/code/notextile element: leave it
+    const tag = m.groups?.tag;
+    if (!tag) continue; // a literal region or an extended block: leave it
     // m.index is the start of the line: textile-js only sees <notextile> there,
     // so any indent goes inside the wrapper.
     const end = matchingCloseEnd(source, tag, m.index + m[0].indexOf("<"));
     if (end < 0) continue;
-    out += `${source.slice(last, m.index)}<notextile>${source.slice(m.index, end)}</notextile>`;
+    // textile-js only takes a block <notextile> when nothing follows it on the
+    // line; anything that does ("</section> <!-- end -->") starts a new line.
+    const tail = /^[ \t]*(?:\r?\n|$)/.test(source.slice(end)) ? "" : "\n";
+    out += `${source.slice(last, m.index)}<notextile>${source.slice(m.index, end)}</notextile>${tail}`;
     last = end;
     HTML5_BLOCK_START.lastIndex = end;
   }

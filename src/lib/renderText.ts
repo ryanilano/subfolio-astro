@@ -160,6 +160,69 @@ function setAside(source: string): { text: string; pieces: Piece[] } {
   return { text, pieces };
 }
 
+/**
+ * HTML5 block elements textile-js 2.1.1 doesn't know. Its `allowedBlocktags`
+ * stops at the HTML4 set (p, div, pre, blockquote, ul, ol, ...), so a block
+ * that opens with `<header>` is treated as a paragraph: the tag is escaped to
+ * text and the blank lines inside it split it into `<p>`s.
+ */
+const HTML5_BLOCKS = ["article", "aside", "figcaption", "figure", "footer", "header", "hgroup", "main", "nav", "section"];
+
+/**
+ * One scan of the source. In order of the alternatives: an HTML comment, or a
+ * `<pre>` / `<code>` / `<notextile>` element (skipped whole, so a tag inside them
+ * is left alone), or an HTML5 block opening tag at the start of a Textile block
+ * (start of the text or after a blank line, leading spaces allowed). An HTML5
+ * tag in the middle of a paragraph is not a block and is left to textile-js.
+ */
+const HTML5_BLOCK_START = new RegExp(
+  "<!--[\\s\\S]*?-->" +
+    "|<(pre|code|notextile)(?=[\\s>])[^>]*>[\\s\\S]*?<\\/\\1\\s*>" +
+    `|(?<=^|\\n[ \\t]*\\n)[ \\t]*<(${HTML5_BLOCKS.join("|")})(?=[\\s/>])[^>]*>`,
+  "gi",
+);
+
+/**
+ * Where the element opened at `from` closes: the end of its matching close tag,
+ * counting nested tags of the same name and skipping comments. -1 if it never
+ * closes; that block is left as it was, and parse5 tidies it later.
+ */
+function matchingCloseEnd(source: string, tag: string, from: number): number {
+  const tags = new RegExp(`<!--[\\s\\S]*?-->|<(\\/?)${tag}(?=[\\s/>])[^>]*>`, "gi");
+  tags.lastIndex = from;
+  let depth = 0;
+  for (let m = tags.exec(source); m; m = tags.exec(source)) {
+    if (m[0].startsWith("<!--")) continue;
+    depth += m[1] ? -1 : 1;
+    if (depth === 0) return m.index + m[0].length;
+  }
+  return -1;
+}
+
+/**
+ * Wrap each top-level HTML5 block in `<notextile>` so textile-js passes it
+ * through as written, the way it already passes `<div>`. Renaming the tags to
+ * `div` instead would not work: a `<div>` nested inside then closes the
+ * renamed outer block early in textile-js's phrase pass.
+ */
+function passHtml5Blocks(source: string): string {
+  let out = "";
+  let last = 0;
+  HTML5_BLOCK_START.lastIndex = 0;
+  for (let m = HTML5_BLOCK_START.exec(source); m; m = HTML5_BLOCK_START.exec(source)) {
+    const tag = m[2];
+    if (!tag) continue; // a comment or a pre/code/notextile element: leave it
+    // m.index is the start of the line: textile-js only sees <notextile> there,
+    // so any indent goes inside the wrapper.
+    const end = matchingCloseEnd(source, tag, m.index + m[0].indexOf("<"));
+    if (end < 0) continue;
+    out += `${source.slice(last, m.index)}<notextile>${source.slice(m.index, end)}</notextile>`;
+    last = end;
+    HTML5_BLOCK_START.lastIndex = end;
+  }
+  return out + source.slice(last);
+}
+
 /** Put the original text back into a string (attribute values, comments). */
 function restore(value: string, pieces: Piece[]): string {
   return value.replace(TOKEN, (token, i: string) => pieces[Number(i)]?.text ?? token);
@@ -277,7 +340,7 @@ function renderTextile(raw: string): string {
   const { text, pieces } = setAside(source);
   let html: string;
   try {
-    html = textile(text);
+    html = textile(passHtml5Blocks(text));
   } catch (err) {
     // Lenient like the rest of the loader: one bad file must not fail the build.
     // Loud, never silent: say which text fell back.

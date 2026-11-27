@@ -187,6 +187,53 @@ test("malformed HTML can't leave an unclosed tag in the page", () => {
   assert.match(html, /unclosed/);
 });
 
+// --- HTML5 block elements (textile-js 2.1.1 only knows the HTML4 block tags) ---
+
+test("a top-level <header> with nested <div>s passes through, not escaped or split", () => {
+  // Shape of a Subfolio project intro: blank lines inside, two nested column divs.
+  const src = [
+    '<header class="project-header">',
+    "  <hgroup><h1>Title</h1></hgroup>",
+    "",
+    '  <div class="column"><div>Left - text</div></div>',
+    "",
+    '  <div class="column">Right "text"</div>',
+    "</header>",
+  ].join("\n");
+  // Before the fix: <p>&#x3C;header class=“project-header”> ... <p>&#x3C;/header></p>
+  assert.equal(tx(src), src, "the block comes out exactly as written");
+});
+
+test("a <figure> with a <figcaption> passes through", () => {
+  const src = '<figure><img src="a.jpg" alt="A"><figcaption>Cap - tion</figcaption></figure>';
+  assert.equal(tx(src), src);
+});
+
+test("Textile around HTML5 blocks still renders", () => {
+  assert.equal(
+    tx("h2. Before - after\n\n<section>\n\nInside\n\n</section>\n\nAfter *bold*"),
+    "<h2>Before – after</h2>\n<section>\n\nInside\n\n</section>\n<p>After <strong>bold</strong></p>",
+  );
+});
+
+test("indented and nested same-name HTML5 blocks close at the matching tag", () => {
+  assert.equal(
+    tx("  <section><section>in</section>\n\nmid\n\n  </section>\n\nh2. After"),
+    "<section><section>in</section>\n\nmid\n\n  </section>\n<h2>After</h2>",
+  );
+});
+
+test("an HTML5 tag inside a paragraph is left to textile-js", () => {
+  // Not at the start of a block, so it isn't set aside: Textile still runs on
+  // the text inside it (the spaced hyphen becomes an en dash).
+  assert.match(tx("Intro - text <section>a - b</section>"), /<section>a – b<\/section>/);
+});
+
+test("an HTML5 block that never closes, or sits inside <pre>, is left as it was", () => {
+  assert.equal(tx("<header>\n\nno close - here"), "<p>&#x3C;header></p>\n<p>no close – here</p>");
+  assert.equal(tx("<pre>\n\n<header>keep</header>\n\n</pre>"), "<pre>\n&#x3C;header>keep&#x3C;/header>\n\n</pre>");
+});
+
 // --- Unknown syntax renders as text, never dropped ---------------------------
 
 test("unknown block modifiers stay literal text", () => {

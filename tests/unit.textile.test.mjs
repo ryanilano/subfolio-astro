@@ -187,6 +187,158 @@ test("malformed HTML can't leave an unclosed tag in the page", () => {
   assert.match(html, /unclosed/);
 });
 
+// --- HTML5 block elements (textile-js 2.1.1 only knows the HTML4 block tags) ---
+
+test("a top-level <header> with nested <div>s passes through, not escaped or split", () => {
+  // Shape of a Subfolio project intro: blank lines inside, two nested column divs.
+  const src = [
+    '<header class="project-header">',
+    "  <hgroup><h1>Title</h1></hgroup>",
+    "",
+    '  <div class="column"><div>Left - text</div></div>',
+    "",
+    '  <div class="column">Right "text"</div>',
+    "</header>",
+  ].join("\n");
+  // Before the fix: <p>&#x3C;header class=“project-header”> ... <p>&#x3C;/header></p>
+  assert.equal(tx(src), src, "the block comes out exactly as written");
+});
+
+test("a <figure> with a <figcaption> across lines passes through as written", () => {
+  const src = '<figure>\n<img src="a.jpg" alt="A">\n<figcaption>Cap - tion, *raw* "quotes" ...</figcaption>\n</figure>';
+  assert.equal(tx(src), src);
+});
+
+test("a one-line HTML5 block keeps Textile inside, as on main", () => {
+  // One line isn't escaped or split by textile-js, so it isn't wrapped:
+  // phrase markup, links and all the typography still apply inside it.
+  const html = tx('<figure><img src="a.jpg" alt="A"><figcaption>*Bold* "link":/about 3 X 4 -- "size" ...</figcaption></figure>');
+  assert.match(html, /<figure><img src="a.jpg" alt="A"><figcaption>/);
+  assert.match(html, /<strong>Bold<\/strong>/);
+  assert.match(html, /<a href="\/about"[^>]*>link<\/a>/);
+  assert.match(html, /3 × 4 — “size” …/);
+});
+
+test("Textile around HTML5 blocks still renders", () => {
+  assert.equal(
+    tx("h2. Before - after\n\n<section>\n\nInside\n\n</section>\n\nAfter *bold*"),
+    "<h2>Before – after</h2>\n<section>\n\nInside\n\n</section>\n<p>After <strong>bold</strong></p>",
+  );
+});
+
+test("indented and nested same-name HTML5 blocks close at the matching tag", () => {
+  assert.equal(
+    tx("  <section><section>in</section>\n\nmid\n\n  </section>\n\nh2. After"),
+    "<section><section>in</section>\n\nmid\n\n  </section>\n<h2>After</h2>",
+  );
+});
+
+test("an HTML5 tag inside a paragraph is left to textile-js", () => {
+  // Not at the start of a block, so it isn't set aside: Textile still runs on
+  // the text inside it (the spaced hyphen becomes an en dash).
+  assert.match(tx("Intro - text <section>a - b</section>"), /<section>a – b<\/section>/);
+});
+
+test("an HTML5 block that never closes, or sits inside <pre>, is left as it was", () => {
+  assert.equal(tx("<header>\n\nno close - here"), "<p>&#x3C;header></p>\n<p>no close – here</p>");
+  assert.equal(tx("<pre>\n\n<header>keep</header>\n\n</pre>"), "<pre>\n&#x3C;header>keep&#x3C;/header>\n\n</pre>");
+});
+
+test("an unclosed <pre>, <code> or <notextile> inside an HTML5 block never drops the text after it", () => {
+  // Wrapped in <notextile>, the open tag would make textile-js swallow the rest
+  // of the file, so the block is left as it was and every word survives.
+  for (const open of ["<pre>", "<code>", "<notextile>"]) {
+    const html = tx(`<section>\n\n${open}unclosed\n\n</section>\n\nAfter *b*\n\nh2. Kept`);
+    assert.match(html, /After/, `${open}: text after the block is kept`);
+    assert.match(html, /Kept/, `${open}: the heading after the block is kept`);
+  }
+});
+
+test("an unclosed <pre> or <code> is not closed by a later section's closer", () => {
+  // The later section's </pre> must not pair with the first section's open
+  // <pre>, or the first </section> is skipped and the text between is dropped.
+  for (const [open, close] of [["<pre>", "</pre>"], ["<code>", "</code>"]]) {
+    const html = tx(
+      `<section>\n\n${open}a\n\n</section>\n\nMiddle *m*\n\n<section>\n\n${open}b${close}\n\n</section>\n\nAfter *b*`,
+    );
+    assert.match(html, /Middle/, `${open}: text between the sections is kept`);
+    assert.match(html, /After/, `${open}: text after the sections is kept`);
+  }
+});
+
+test("a <pre> closed by the wrong closer never leaks the wrapper as text", () => {
+  const html = tx("<section>\n\n<pre>a</code>\n\n</section>\n\nAfter");
+  assert.doesNotMatch(html, /notextile/);
+  assert.match(html, /After/);
+});
+
+test("a block textile-js can't pass through whole is left as it was, so the text after it survives", () => {
+  // textile-js reads a <notextile> block until every tag inside is closed:
+  // left-off end tags, void tags it doesn't know and a self-closed <code/>
+  // would make it drop the rest of the file.
+  for (const src of [
+    "<section>\n<p>One\n<p>Two\n</section>\n\nAfter text",
+    'Intro\n\n<figure>\n<img src="a.jpg">\n<figcaption>Cap\n</figure>\n\nAfter text',
+    '<figure>\n<picture><source srcset="a.webp" type="image/webp"><img src="a.jpg"></picture>\n</figure>\n\nAfter text',
+    "<section><span>open</section>\n\nAfter text",
+    "<section><code/>x</section>\n\nAfter text",
+    "<section><code>a</CODE></section>\n\nAfter text",
+  ]) {
+    assert.match(tx(src), /After text/, JSON.stringify(src));
+  }
+});
+
+test("a wrapper that lands inside a code block is never shown as text", () => {
+  for (const src of [
+    "bc.. code\n\nP. S. still code\n\n<section>inside</section>\n\np. end",
+    "<!-- c -->\nbc.. code\n\n<section>inside</section>\n\np. end",
+    "<pre>\n<code>x</code>\n\n<section>y</section>\n</pre>\n\nAfter text",
+  ]) {
+    assert.doesNotMatch(tx(src), /notextile/, JSON.stringify(src));
+  }
+});
+
+test('the word "notextile" in the text doesn\'t switch off the wrapper checks', () => {
+  // A leaked wrapper is still caught when the author's prose mentions the word.
+  const leak = tx("bc.. code\n\nP. S. still code\n\n<section>inside</section>\n\np. Textile has notextile blocks too.");
+  assert.equal(leak.match(/notextile/gi)?.length, 1, leak);
+  // A block that mentions the word still passes through as an element.
+  const block = tx("<section>\n\n<p>About notextile</p>\n\n</section>\n\nAfter text");
+  assert.match(block, /^<section>/);
+  assert.match(block, /After text/);
+});
+
+test("HTML5 blocks in CRLF text pass through too", () => {
+  assert.equal(
+    tx('h2. Intro\r\n\r\n<header class="x">\r\n\r\n<div>a</div>\r\n\r\n</header>\r\n\r\nAfter'),
+    '<h2>Intro</h2>\n<header class="x">\n\n<div>a</div>\n\n</header>\n<p>After</p>',
+  );
+});
+
+test("an HTML5 tag inside an extended bc.. or pre.. block stays literal code", () => {
+  assert.equal(
+    tx("bc.. <div>\n\n<header>Title</header>\n\np. done"),
+    "<pre><code>&#x3C;div>\n\n&#x3C;header>Title&#x3C;/header></code></pre>\n<p>done</p>",
+  );
+  assert.equal(
+    tx("pre.. a\n\n<section>x</section>\n\nh2. After"),
+    "<pre>a\n\n&#x3C;section>x&#x3C;/section></pre>\n<h2>After</h2>",
+  );
+});
+
+test("text after an HTML5 block's close tag, on the same line, never leaks the wrapper", () => {
+  assert.equal(
+    tx("<section>\n\ntext\n\n</section> <!-- end intro -->"),
+    "<section>\n\ntext\n\n</section>\n<!-- end intro -->",
+  );
+  assert.equal(tx("<section>\n\na\n\n</section> and *more*"), "<section>\n\na\n\n</section>\n<p>and <strong>more</strong></p>");
+});
+
+test("a same-name tag inside <pre> doesn't throw off the close-tag match", () => {
+  const html = tx("<section>\n\n<pre>&lt;section&gt; example</pre>\n\n</section>\n\nAfter");
+  assert.equal(html, "<section>\n\n<pre>&#x3C;section> example</pre>\n\n</section>\n<p>After</p>");
+});
+
 // --- Unknown syntax renders as text, never dropped ---------------------------
 
 test("unknown block modifiers stay literal text", () => {
